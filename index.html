@@ -1,125 +1,371 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-MZ">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Geracão de Expedientes - DPE Niassa</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #003366; }
-        label { font-weight: bold; display: block; margin-top: 10px; }
-        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #003366; color: white; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        button:hover { background-color: #002244; }
-        #output { margin-top: 20px; white-space: pre-wrap; font-family: "Times New Roman", serif; background: #fff; padding: 20px; border: 1px solid #ddd; }
-        .print-btn { background-color: #28a745; margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Ofícios — DPE Niassa / DRH</title>
+<style>
+  :root{
+    --azul: #1b3a6b;
+    --cinza: #555;
+    --fundo: #f4f6f9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--fundo);
+    margin:0;
+    padding:0;
+    color:#222;
+  }
+  header{
+    background: var(--azul);
+    color:#fff;
+    padding: 18px 24px;
+  }
+  header h1{ margin:0; font-size: 1.3rem; }
+  header p{ margin:4px 0 0; font-size: 0.85rem; opacity:0.85; }
+
+  .container{
+    max-width: 1100px;
+    margin: 24px auto;
+    padding: 0 16px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px){
+    .container{ grid-template-columns: 1fr; }
+  }
+
+  .card{
+    background:#fff;
+    border-radius:10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    padding: 20px;
+  }
+  .card h2{ margin-top:0; font-size:1.05rem; color: var(--azul); }
+
+  label{
+    display:block;
+    font-size: 0.85rem;
+    font-weight:600;
+    margin: 12px 0 4px;
+    color: var(--cinza);
+  }
+  select, input[type=text], input[type=password], input[type=date], textarea{
+    width:100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  textarea{ min-height: 80px; resize: vertical; }
+
+  .row{ display:flex; gap: 10px; }
+  .row > div{ flex:1; }
+
+  button{
+    cursor:pointer;
+    border:none;
+    border-radius:6px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight:600;
+  }
+  .btn-primary{ background: var(--azul); color:#fff; }
+  .btn-primary:hover{ background:#142c52; }
+  .btn-secondary{ background:#e2e8f0; color:#222; }
+  .btn-secondary:hover{ background:#cbd5e1; }
+  .btn-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .hint{ font-size:0.78rem; color:#888; margin-top:2px; }
+  .status{ font-size:0.85rem; margin-top:8px; min-height: 18px; }
+  .status.ok{ color: #1a7f37; }
+  .status.err{ color: #c0392b; }
+
+  /* Pré-visualização estilo documento oficial */
+  #preview-wrap{
+    background:#fff;
+    border-radius:10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    padding: 20px;
+  }
+  #doc{
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13pt;
+    line-height: 1.5;
+    background:#fff;
+    border: 1px solid #ddd;
+    padding: 40px;
+    min-height: 500px;
+  }
+  #doc .brasao{
+    text-align:center;
+    margin-bottom: 6px;
+  }
+  #doc .brasao img{ height:70px; }
+  #doc .cabecalho{
+    text-align:center;
+    font-weight:bold;
+    line-height:1.2;
+    margin-bottom: 18px;
+  }
+  #doc .cabecalho .lichinga{ font-weight:normal; }
+  #doc .destinatario{ margin-bottom: 4px; }
+  #doc .ref-data{ display:flex; justify-content:space-between; margin: 10px 0; }
+  #doc .assunto{ font-weight:bold; margin-bottom: 14px; }
+  #doc .corpo{ text-align: justify; white-space: pre-wrap; }
+  #doc .assinatura{ margin-top: 46px; text-align:center; }
+  #doc .assinatura .cargo{ margin-bottom: 40px; }
+
+  details{ margin-top:18px; }
+  summary{ cursor:pointer; font-size:0.85rem; color: var(--azul); font-weight:600; }
+</style>
 </head>
 <body>
 
+<header>
+  <h1>Gerador de Ofícios Institucionais — DPE Niassa / DRH</h1>
+  <p>Repartição de Administração e Gestão do Pessoal — rascunhos assistidos por IA, com download em Word</p>
+</header>
+
 <div class="container">
-    <h2>Direccao Provincial de Educacão de Niassa</h2>
-    <p><strong>Departamento de Recursos Humanos</strong> | Reparticao de Administracão e Gestão do Pessoal</p>
-    <hr>
 
-    <label for="apiKey">Chave de API do Google Gemini:</label>
-    <input type="password" id="apiKey" placeholder="Cole sua chave Gemini API aqui...">
+  <!-- FORMULÁRIO -->
+  <div class="card">
+    <h2>1. Dados do documento</h2>
 
-    <label for="docType">Tipo de Expediente/Documento:</label>
-    <select id="docType">
-        <option value="Resposta de Pedido de Disponibilidade de Vaga (Com Vaga)">Resposta de Pedido de Vaga (Com Vaga)</option>
-        <option value="Resposta de Pedido de Disponibilidade de Vaga (Sem Vaga)">Resposta de Pedido de Vaga (Sem Vaga)</option>
-        <option value="Informacão Proposta / Parecer de Transferência">Informacão Proposta / Parecer de Transferência</option>
-        <option value="Guia de Marcha">Guia de Marcha</option>
-        <option value="Devolucão de Processo com Pendências">Devolucão de Processo com Pendências</option>
-        <option value="Requisicão de Material ao Património">Requisicão de Material ao Património</option>
+    <label>Tipo de documento</label>
+    <select id="tipoDoc">
+      <option value="envio_expediente">Ofício — Envio de Expediente</option>
+      <option value="resposta_vaga">Ofício — Resposta a Pedido de Disponibilidade de Vaga</option>
+      <option value="pedido_vaga">Ofício — Pedido de Existência de Vaga</option>
+      <option value="parecer_despacho">Parecer / Despacho</option>
+      <option value="requisicao">Requisição de Material</option>
+      <option value="guia_marcha">Guia de Marcha</option>
+      <option value="convocatoria">Convocatória</option>
+      <option value="comunicado">Comunicado</option>
     </select>
 
-    <label for="destinatario">Destinatário (Ex: Gabinete do Governador, SDEJT de Lichinga, etc.):</label>
-    <input type="text" id="destinatario" placeholder="Ex: Gabinete do Governador da Província do Niassa">
-
-    <label for="dadosFuncionario">Dados do Funcionário / Descricão do Assunto:</label>
-    <textarea id="dadosFuncionario" rows="4" placeholder="Ex: Lúcia de Nascimento Amós, NUIT 116285363, Docente N3, Classe C, Escalão 2..."></textarea>
-
-    <button onclick="gerarDocumento()">Gerar Expediente com IA (Gemini)</button>
-
-    <div id="resultArea" style="display:none;">
-        <h3>Documento Gerado:</h3>
-        <div id="output"></div>
-        <button class="print-btn" onclick="imprimirDocumento()">Imprimir / Salvar como PDF</button>
+    <div class="row">
+      <div>
+        <label>N/Refª</label>
+        <input type="text" id="ref" placeholder="ex: 048/DPE/DRH/2026">
+      </div>
+      <div>
+        <label>Data</label>
+        <input type="date" id="data">
+      </div>
     </div>
+
+    <label>Destinatário (Ao / À)</label>
+    <input type="text" id="destinatario" placeholder="ex: Governo do Distrito de Lichinga">
+
+    <label>Assunto</label>
+    <input type="text" id="assunto" placeholder="ex: Transferência">
+
+    <label>Assinado por</label>
+    <select id="assinante">
+      <option value="director">O Director Provincial — Matias Félix Chapungo / Especialista de Educação /</option>
+      <option value="chefe_drh">O Chefe do DRH — Loio L.L Alimo / ITPN1 /</option>
+    </select>
+
+    <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
+
+    <h2>2. Redacção assistida por IA (opcional)</h2>
+    <label>Pontos-chave (frases curtas, uma por linha)</label>
+    <textarea id="pontos" placeholder="ex:&#10;funcionário Cássimo Rachide Ali&#10;Docente N3, Classe C, Escalão 2&#10;em exercício no SDEJT de Liupo, Nampula&#10;pretende transferir para Mandimba&#10;solicitar confirmação de vaga"></textarea>
+    <div class="hint">A IA escreve o corpo do texto em português formal moçambicano, seguindo o estilo dos seus ofícios.</div>
+
+    <details>
+      <summary>Configurar chave da API Gemini (gratuita)</summary>
+      <label>Chave da API (Google AI Studio — aistudio.google.com/apikey)</label>
+      <input type="password" id="apiKey" placeholder="cole aqui a sua chave — fica só no seu navegador">
+      <div class="hint">Nunca é enviada para mim nem guardada em servidor nenhum: fica gravada apenas no localStorage do seu navegador.</div>
+    </details>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="gerarComIA()">✨ Gerar rascunho com IA</button>
+      <button class="btn-secondary" onclick="atualizarPreview()">Actualizar pré-visualização</button>
+    </div>
+    <div id="status" class="status"></div>
+
+    <label style="margin-top:18px;">Corpo do texto (editável)</label>
+    <textarea id="corpo" style="min-height:160px;" placeholder="Escreva aqui directamente, ou use a IA acima para gerar um rascunho."></textarea>
+  </div>
+
+  <!-- PRÉ-VISUALIZAÇÃO -->
+  <div>
+    <div id="preview-wrap">
+      <h2 style="margin-top:0; color:var(--azul); font-size:1.05rem;">Pré-visualização</h2>
+      <div id="doc">
+        <div class="brasao"><!-- Coloque aqui o seu brasão: <img src="brasao.png"> --></div>
+        <div class="cabecalho">
+          REPÚBLICA DE MOÇAMBIQUE<br>
+          PROVÍNCIA DO NIASSA<br>
+          DIRECÇÃO PROVINCIAL DE EDUCAÇÃO<br>
+          <span class="lichinga">= Lichinga =</span>
+        </div>
+        <div class="destinatario" id="p-destinatario"></div>
+        <div class="ref-data">
+          <span id="p-ref"></span>
+          <span id="p-data"></span>
+        </div>
+        <div class="assunto" id="p-assunto"></div>
+        <div class="corpo" id="p-corpo"></div>
+        <div class="assinatura">
+          <div class="cargo" id="p-cargo"></div>
+          <div id="p-nome"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="baixarWord()">⬇ Descarregar em Word (.doc)</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-async function gerarDocumento() {
-    const apiKey = document.getElementById('apiKey').value;
-    const docType = document.getElementById('docType').value;
-    const destinatario = document.getElementById('destinatario').value;
-    const dadosFuncionario = document.getElementById('dadosFuncionario').value;
-    const outputDiv = document.getElementById('output');
+const CARGO_TEXTO = {
+  director: { cargo: "O Director Provincial", nome: "Matias Félix Chapungo\n/ Especialista de Educação /" },
+  chefe_drh: { cargo: "O Chefe do DRH", nome: "Loio L.L Alimo\n/ ITPN1 /" }
+};
 
-    if (!apiKey) {
-        alert("Por favor, introduza a sua chave da API do Gemini.");
-        return;
-    }
+const ABERTURAS = {
+  envio_expediente: "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, ",
+  resposta_vaga: "Em resposta ao pedido de disponibilidade de vaga, honra-nos comunicar o seguinte:",
+  pedido_vaga: "Deu entrada nesta Direcção Provincial de Educação do Niassa um processo que solicita a confirmação de existência de vaga, nos seguintes termos:",
+  parecer_despacho: "",
+  requisicao: "Havendo necessidade para o cumprimento das actividades do Departamento de Recursos Humanos, vimos por este meio requisitar a V. Excia os materiais abaixo mencionados:",
+  guia_marcha: "Segue apresentar-se ",
+  convocatoria: "Convoca-se os funcionários para participar na reunião, nos seguintes termos:",
+  comunicado: "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:"
+};
 
-    outputDiv.innerText = "A gerar documento...";
-    document.getElementById('resultArea').style.display = "block";
-
-    const prompt = `
-    Você é um assistente administrativo do Departamento de Recursos Humanos (Repartição de Administração e Gestão do Pessoal) da Direcção Provincial de Educação de Niassa, Moçambique.
-    
-    Gere um documento oficial no formato padrão da República de Moçambique com os seguintes dados:
-    - Cabeçalho Oficial:
-      REPÚBLICA DE MOÇAMBIQUE
-      PROVÍNCIA DO NIASSA
-      DIRECÇÃO PROVINCIAL DA EDUCAÇÃO
-      = Lichinga =
-    - Tipo de documento: ${docType}
-    - Destinatário: ${destinatario}
-    - Detalhes do assunto/funcionário: ${dadosFuncionario}
-    
-    REGRA OBRIGATÓRIA DE ASSINATURA:
-    O assinante final DEVE SER SEMPRE:
-    O Director Provincial
-    Matias Félix Chapungo
-    / Especialista de Educação /
-    
-    NUNCA use "A Directora Provincial" ou "Alocre Saide". Mantenha o tom formal, conciso e administrativo moçambicano.
-    `;
-
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-
-        const data = await response.json();
-        if (data.candidates && data.candidates[0].content.parts[0].text) {
-            outputDiv.innerText = data.candidates[0].content.parts[0].text;
-        } else {
-            outputDiv.innerText = "Erro ao gerar o documento. Verifique a chave de API.";
-        }
-    } catch (error) {
-        outputDiv.innerText = "Erro de conexão: " + error.message;
-    }
+function formatarDataPT(iso){
+  if(!iso) return "";
+  const [y,m,d] = iso.split("-");
+  return `Data: ${d}. ${m}. ${y}`;
 }
 
-function imprimirDocumento() {
-    const conteudo = document.getElementById('output').innerText;
-    const win = window.open('', '', 'height=700,width=900');
-    win.document.write('<html><head><title>Imprimir Expediente</title>');
-    win.document.write('<style>body { font-family: "Times New Roman", serif; font-size: 12pt; padding: 40px; line-height: 1.5; }</style>');
-    win.document.write('</head><body>');
-    win.document.write('<pre style="font-family: inherit; white-space: pre-wrap;">' + conteudo + '</pre>');
-    win.document.write('</body></html>');
-    win.document.close();
-    win.print();
+function atualizarPreview(){
+  const destinatario = document.getElementById("destinatario").value.trim();
+  const ref = document.getElementById("ref").value.trim();
+  const data = document.getElementById("data").value;
+  const assunto = document.getElementById("assunto").value.trim();
+  const corpo = document.getElementById("corpo").value.trim();
+  const assinante = document.getElementById("assinante").value;
+
+  document.getElementById("p-destinatario").textContent = destinatario ? "Ao: " + destinatario : "";
+  document.getElementById("p-ref").textContent = ref ? "N/Refª " + ref : "";
+  document.getElementById("p-data").textContent = formatarDataPT(data);
+  document.getElementById("p-assunto").textContent = assunto ? "Assunto: " + assunto : "";
+  document.getElementById("p-corpo").textContent = corpo;
+
+  const info = CARGO_TEXTO[assinante];
+  document.getElementById("p-cargo").textContent = info.cargo;
+  document.getElementById("p-nome").innerHTML = info.nome.replace("\n","<br>");
 }
+
+["destinatario","ref","data","assunto","corpo","assinante","tipoDoc"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", atualizarPreview);
+  document.getElementById(id).addEventListener("change", atualizarPreview);
+});
+
+// guarda/recupera a chave API só localmente
+const apiKeyInput = document.getElementById("apiKey");
+apiKeyInput.value = localStorage.getItem("dpen_gemini_key") || "";
+apiKeyInput.addEventListener("input", ()=> localStorage.setItem("dpen_gemini_key", apiKeyInput.value));
+
+function setStatus(msg, tipo){
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = "status " + (tipo || "");
+}
+
+async function gerarComIA(){
+  const key = apiKeyInput.value.trim();
+  if(!key){
+    setStatus("Cole primeiro a sua chave da API Gemini (grátis em aistudio.google.com/apikey).", "err");
+    return;
+  }
+  const tipo = document.getElementById("tipoDoc").value;
+  const assunto = document.getElementById("assunto").value.trim();
+  const destinatario = document.getElementById("destinatario").value.trim();
+  const pontos = document.getElementById("pontos").value.trim();
+  const abertura = ABERTURAS[tipo] || "";
+
+  const prompt = `Escreva o corpo de um documento oficial moçambicano do tipo "${tipo}", em português formal de Moçambique, no estilo de um ofício da Direcção Provincial de Educação do Niassa.
+Destinatário: ${destinatario || "(não indicado)"}
+Assunto: ${assunto || "(não indicado)"}
+Pontos-chave a incluir:
+${pontos || "(nenhum fornecido — use uma redacção genérica adequada ao tipo de documento)"}
+
+Regras:
+- Comece o texto (ou continue) a partir desta abertura padrão, sem repeti-la: "${abertura}"
+- Tom formal, directo, terceira pessoa ("temos a honra de", "honra-nos comunicar", "V. Excia").
+- Cite a legislação aplicável apenas se fizer sentido (ex: Lei nº 4/2022 de 11 de Fevereiro; Decreto nº 28/2022 de 17 de Junho).
+- Termine com "Cordiais Saudações." numa linha própria.
+- Não inclua cabeçalho, destinatário, data nem assinatura — só o corpo do texto.
+- Responda apenas com o texto final, sem comentários.`;
+
+  setStatus("A gerar rascunho...", "");
+  try{
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    const data = await resp.json();
+    if(!resp.ok){
+      throw new Error(data?.error?.message || "Erro na chamada à API");
+    }
+    const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if(!texto) throw new Error("A IA não devolveu texto.");
+    document.getElementById("corpo").value = (abertura + " " + texto).replace(/\s+/g," ").trim();
+    atualizarPreview();
+    setStatus("Rascunho gerado. Reveja e ajuste antes de descarregar.", "ok");
+  }catch(err){
+    setStatus("Falhou: " + err.message, "err");
+  }
+}
+
+function baixarWord(){
+  atualizarPreview();
+  const docHtml = document.getElementById("doc").innerHTML;
+  const template = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset="utf-8"><title>Documento</title>
+    <style>
+      body{ font-family:'Times New Roman', Times, serif; font-size:13pt; }
+      .cabecalho{ text-align:center; font-weight:bold; }
+      .assunto{ font-weight:bold; }
+      .corpo{ text-align:justify; white-space:pre-wrap; }
+      .assinatura{ text-align:center; margin-top:50px; }
+      .cargo{ margin-bottom:40px; }
+      .ref-data{ display:flex; justify-content:space-between; }
+    </style></head>
+    <body>${docHtml}</body></html>`;
+  const blob = new Blob(['\ufeff', template], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const nomeFicheiro = (document.getElementById("assunto").value.trim() || "documento").replace(/[^\w\- ]/g,"").trim() || "documento";
+  a.href = url;
+  a.download = nomeFicheiro + ".doc";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// estado inicial
+document.getElementById("data").valueAsDate = new Date();
+atualizarPreview();
 </script>
 
 </body>
