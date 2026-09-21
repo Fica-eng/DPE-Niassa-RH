@@ -151,8 +151,8 @@
 
     <div class="row">
       <div>
-        <label>N/Refª</label>
-        <input type="text" id="ref" placeholder="ex: 048/DPE/DRH/2026">
+        <label>N/Refª (nº)</label>
+        <input type="text" id="refNum" placeholder="ex: 048" style="max-width:90px;">
       </div>
       <div>
         <label>Data</label>
@@ -160,11 +160,75 @@
       </div>
     </div>
 
+    <label>N/Refª (código)</label>
+    <select id="refCodigo">
+      <option value="DPE/DRH">DPE/DRH (genérico)</option>
+      <option value="DPE/DRH/025.5">DPE/DRH/025.5 (Mobilidade / Transferência)</option>
+      <option value="DPE/DRH/028.2">DPE/DRH/028.2 (Nomeação em comissão de serviço)</option>
+      <option value="DPE/DRH/023.4">DPE/DRH/023.4 (Devolução de processo)</option>
+      <option value="DPE/DRH/020">DPE/DRH/020 (Informação Salarial)</option>
+      <option value="outro">Outro (escrever)</option>
+    </select>
+    <input type="text" id="refCodigoOutro" style="display:none; margin-top:6px;" placeholder="Escreva o código, ex: DPE/DRH/030">
+
     <label>Destinatário (Ao / À)</label>
-    <input type="text" id="destinatario" placeholder="ex: Governo do Distrito de Lichinga">
+    <select id="destinatarioSelect">
+      <option value="">— Seleccionar —</option>
+      <option>Gabinete do Governador da Província do Niassa</option>
+      <option>Governo do Distrito de Lichinga</option>
+      <option>Governo do Distrito de Mecanhelas</option>
+      <option>Governo do Distrito de Mandimba</option>
+      <option>Governo do Distrito de Majune</option>
+      <option>Governo do Distrito de Chimbunila</option>
+      <option>Governo do Distrito de Nipepe</option>
+      <option>SDEJT de Lichinga</option>
+      <option>SDEJT de Mecanhelas</option>
+      <option>SDEJT de Ngaúma</option>
+      <option>SDEJT de Chimbunila</option>
+      <option>SDEJT de Lago</option>
+      <option>SDEJT de Cuamba</option>
+      <option>SDEJT de Sanga</option>
+      <option>Direcção Provincial de Educação de Nampula</option>
+      <option>Direcção Provincial de Educação de Zambézia</option>
+      <option>Tribunal Administrativo Provincial do Niassa</option>
+      <option>Tribunal Judicial da Província do Niassa</option>
+      <option>Comando Provincial da PRM do Niassa</option>
+      <option>Serviço Nacional de Investigação Criminal</option>
+      <option>Secretaria Distrital de Lichinga</option>
+      <option>Gabinete Provincial de Combate à Corrupção do Niassa</option>
+      <option>Ministério da Educação e Desenvolvimento Humano</option>
+      <option>Universidade Rovuma</option>
+      <option>Património (interno)</option>
+      <option>Departamento de Estudo e Planificação (interno)</option>
+      <option>Departamento de Assuntos Transversais (interno)</option>
+      <option value="outro">Outro (escrever)</option>
+    </select>
+    <input type="text" id="destinatarioOutro" style="display:none; margin-top:6px;" placeholder="Escreva o destinatário">
 
     <label>Assunto</label>
-    <input type="text" id="assunto" placeholder="ex: Transferência">
+    <select id="assuntoSelect">
+      <option value="">— Seleccionar —</option>
+      <option>Envio de Expediente</option>
+      <option>Resposta do Pedido de Disponibilidade de Vaga</option>
+      <option>Pedido de Existência de Vaga</option>
+      <option>Transferência</option>
+      <option>Mobilidade</option>
+      <option>Parecer</option>
+      <option>Despacho</option>
+      <option>Requisição</option>
+      <option>Comunicado</option>
+      <option>Convocatória</option>
+      <option>Informação Salarial</option>
+      <option>Pedido de Parecer</option>
+      <option>Devolução de processo</option>
+      <option>Nomeação em comissão de serviço</option>
+      <option>Envio de fichas de classificação</option>
+      <option>Envio de plano de férias</option>
+      <option>Solicitação de Transferência de Funcionário</option>
+      <option>Transcrição de Despacho</option>
+      <option value="outro">Outro (escrever)</option>
+    </select>
+    <input type="text" id="assuntoOutro" style="display:none; margin-top:6px;" placeholder="Escreva o assunto">
 
     <label>Assinado por</label>
     <select id="assinante">
@@ -198,10 +262,14 @@
 
   <!-- PRÉ-VISUALIZAÇÃO -->
   <div>
+    <div class="card" style="margin-bottom:24px;">
+      <h2 style="margin-top:0;">Histórico de documentos <button class="btn-secondary" style="float:right; padding:4px 10px; font-size:0.8rem;" onclick="toggleHistorico()">Mostrar/ocultar</button></h2>
+      <div id="historicoLista" style="display:none; max-height:260px; overflow-y:auto; font-size:0.85rem;"></div>
+    </div>
     <div id="preview-wrap">
       <h2 style="margin-top:0; color:var(--azul); font-size:1.05rem;">Pré-visualização</h2>
       <div id="doc">
-        <div class="brasao"><!-- Coloque aqui o seu brasão: <img src="brasao.png"> --></div>
+        <div class="brasao"><img id="imgBrasao" src="brasao.png" alt="Brasão" onerror="this.style.display='none'"></div>
         <div class="cabecalho">
           REPÚBLICA DE MOÇAMBIQUE<br>
           PROVÍNCIA DO NIASSA<br>
@@ -251,11 +319,41 @@ function formatarDataPT(iso){
   return `Data: ${d}. ${m}. ${y}`;
 }
 
+function valorComOutro(selectId, outroId){
+  const sel = document.getElementById(selectId).value;
+  if(sel === "outro") return document.getElementById(outroId).value.trim();
+  return sel.trim();
+}
+
+function getDestinatario(){ return valorComOutro("destinatarioSelect","destinatarioOutro"); }
+function getAssunto(){ return valorComOutro("assuntoSelect","assuntoOutro"); }
+function getRefCodigo(){ return valorComOutro("refCodigo","refCodigoOutro"); }
+function getReferencia(){
+  const num = document.getElementById("refNum").value.trim();
+  const codigo = getRefCodigo();
+  if(!num && !codigo) return "";
+  return (num || "___") + "/" + (codigo || "DPE/DRH");
+}
+
+function ligarSelectComOutro(selectId, outroId){
+  const sel = document.getElementById(selectId);
+  const outro = document.getElementById(outroId);
+  sel.addEventListener("change", ()=>{
+    outro.style.display = sel.value === "outro" ? "block" : "none";
+    if(sel.value === "outro") outro.focus();
+    atualizarPreview();
+  });
+  outro.addEventListener("input", atualizarPreview);
+}
+ligarSelectComOutro("destinatarioSelect","destinatarioOutro");
+ligarSelectComOutro("assuntoSelect","assuntoOutro");
+ligarSelectComOutro("refCodigo","refCodigoOutro");
+
 function atualizarPreview(){
-  const destinatario = document.getElementById("destinatario").value.trim();
-  const ref = document.getElementById("ref").value.trim();
+  const destinatario = getDestinatario();
+  const ref = getReferencia();
   const data = document.getElementById("data").value;
-  const assunto = document.getElementById("assunto").value.trim();
+  const assunto = getAssunto();
   const corpo = document.getElementById("corpo").value.trim();
   const assinante = document.getElementById("assinante").value;
 
@@ -270,10 +368,71 @@ function atualizarPreview(){
   document.getElementById("p-nome").innerHTML = info.nome.replace("\n","<br>");
 }
 
-["destinatario","ref","data","assunto","corpo","assinante","tipoDoc"].forEach(id=>{
+["refNum","data","corpo","assinante","tipoDoc"].forEach(id=>{
   document.getElementById(id).addEventListener("input", atualizarPreview);
   document.getElementById(id).addEventListener("change", atualizarPreview);
 });
+
+// ---- Histórico ----
+function toggleHistorico(){
+  const el = document.getElementById("historicoLista");
+  const abrir = el.style.display === "none";
+  el.style.display = abrir ? "block" : "none";
+  if(abrir) renderHistorico();
+}
+
+function getHistorico(){
+  try{ return JSON.parse(localStorage.getItem("dpen_historico") || "[]"); }
+  catch(e){ return []; }
+}
+
+function saveHistorico(entry){
+  const lista = getHistorico();
+  lista.unshift(entry);
+  localStorage.setItem("dpen_historico", JSON.stringify(lista.slice(0,200)));
+}
+
+function renderHistorico(){
+  const lista = getHistorico();
+  const el = document.getElementById("historicoLista");
+  if(lista.length === 0){
+    el.innerHTML = "<p class='hint'>Ainda não há documentos gerados neste navegador.</p>";
+    return;
+  }
+  el.innerHTML = lista.map((doc, i) => `
+    <div style="padding:8px 0; border-bottom:1px solid #eee; cursor:pointer;" onclick="carregarHistorico(${i})">
+      <strong>${doc.assunto || "(sem assunto)"}</strong><br>
+      <span class="hint">${doc.data || ""} · N/Refª ${doc.ref || "—"} · ${doc.destinatario || "—"}</span>
+    </div>
+  `).join("");
+}
+
+function carregarHistorico(i){
+  const doc = getHistorico()[i];
+  if(!doc) return;
+  document.getElementById("tipoDoc").value = doc.tipo || "envio_expediente";
+  document.getElementById("refNum").value = doc.refNum || "";
+  document.getElementById("data").value = doc.dataISO || "";
+  document.getElementById("corpo").value = doc.corpo || "";
+  document.getElementById("assinante").value = doc.assinante || "director";
+
+  // destinatário
+  const destSel = document.getElementById("destinatarioSelect");
+  const destOpt = Array.from(destSel.options).some(o => o.value === doc.destinatario);
+  destSel.value = destOpt ? doc.destinatario : "outro";
+  document.getElementById("destinatarioOutro").style.display = destOpt ? "none" : "block";
+  document.getElementById("destinatarioOutro").value = destOpt ? "" : (doc.destinatario || "");
+
+  // assunto
+  const assSel = document.getElementById("assuntoSelect");
+  const assOpt = Array.from(assSel.options).some(o => o.value === doc.assunto);
+  assSel.value = assOpt ? doc.assunto : "outro";
+  document.getElementById("assuntoOutro").style.display = assOpt ? "none" : "block";
+  document.getElementById("assuntoOutro").value = assOpt ? "" : (doc.assunto || "");
+
+  atualizarPreview();
+  setStatus("Documento carregado do histórico.", "ok");
+}
 
 // guarda/recupera a chave API só localmente
 const apiKeyInput = document.getElementById("apiKey");
@@ -293,8 +452,8 @@ async function gerarComIA(){
     return;
   }
   const tipo = document.getElementById("tipoDoc").value;
-  const assunto = document.getElementById("assunto").value.trim();
-  const destinatario = document.getElementById("destinatario").value.trim();
+  const assunto = getAssunto();
+  const destinatario = getDestinatario();
   const pontos = document.getElementById("pontos").value.trim();
   const abertura = ABERTURAS[tipo] || "";
 
@@ -337,6 +496,19 @@ Regras:
 
 function baixarWord(){
   atualizarPreview();
+
+  saveHistorico({
+    tipo: document.getElementById("tipoDoc").value,
+    refNum: document.getElementById("refNum").value.trim(),
+    ref: getReferencia(),
+    dataISO: document.getElementById("data").value,
+    data: formatarDataPT(document.getElementById("data").value),
+    destinatario: getDestinatario(),
+    assunto: getAssunto(),
+    assinante: document.getElementById("assinante").value,
+    corpo: document.getElementById("corpo").value.trim()
+  });
+
   const docHtml = document.getElementById("doc").innerHTML;
   const template = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -354,7 +526,7 @@ function baixarWord(){
   const blob = new Blob(['\ufeff', template], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const nomeFicheiro = (document.getElementById("assunto").value.trim() || "documento").replace(/[^\w\- ]/g,"").trim() || "documento";
+  const nomeFicheiro = (getAssunto() || "documento").replace(/[^\w\- ]/g,"").trim() || "documento";
   a.href = url;
   a.download = nomeFicheiro + ".doc";
   document.body.appendChild(a);
