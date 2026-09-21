@@ -265,6 +265,16 @@
     <div class="card" style="margin-bottom:24px;">
       <h2 style="margin-top:0;">Histórico de documentos <button class="btn-secondary" style="float:right; padding:4px 10px; font-size:0.8rem;" onclick="toggleHistorico()">Mostrar/ocultar</button></h2>
       <div id="historicoLista" style="display:none; max-height:260px; overflow-y:auto; font-size:0.85rem;"></div>
+      <details style="margin-top:12px;">
+        <summary>Configurar armazenamento partilhado (Firebase, gratuito) — necessário só uma vez</summary>
+        <div class="hint" style="margin:8px 0;">Sem isto, o histórico fica preso a este navegador. Com isto, fica visível em qualquer computador que abra o site.</div>
+        <label>Configuração do Firebase (cole aqui o objecto firebaseConfig)</label>
+        <textarea id="firebaseConfigInput" style="min-height:100px; font-family:monospace; font-size:0.8rem;" placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "...", ...}'></textarea>
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="guardarConfigFirebase()">Guardar configuração</button>
+        </div>
+        <div id="firebaseStatus" class="status"></div>
+      </details>
     </div>
     <div id="preview-wrap">
       <h2 style="margin-top:0; color:var(--azul); font-size:1.05rem;">Pré-visualização</h2>
@@ -296,6 +306,8 @@
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const CARGO_TEXTO = {
   director: { cargo: "O Director Provincial", nome: "Matias Félix Chapungo\n/ Especialista de Educação /" },
@@ -373,6 +385,42 @@ function atualizarPreview(){
   document.getElementById(id).addEventListener("change", atualizarPreview);
 });
 
+// ---- Firebase (armazenamento partilhado do histórico) ----
+let db = null;
+
+function initFirebase(){
+  const configStr = localStorage.getItem("dpen_firebase_config");
+  if(!configStr) return;
+  try{
+    const config = JSON.parse(configStr);
+    if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
+    db = firebase.firestore();
+    document.getElementById("firebaseConfigInput").value = configStr;
+  }catch(e){
+    console.error("Erro ao iniciar Firebase:", e);
+  }
+}
+
+function guardarConfigFirebase(){
+  const raw = document.getElementById("firebaseConfigInput").value.trim();
+  const statusEl = document.getElementById("firebaseStatus");
+  try{
+    const config = JSON.parse(raw);
+    localStorage.setItem("dpen_firebase_config", JSON.stringify(config));
+    if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
+    else { firebase.app().delete().then(()=> firebase.initializeApp(config)); }
+    db = firebase.firestore();
+    statusEl.textContent = "Configuração guardada. O histórico já está partilhado.";
+    statusEl.className = "status ok";
+    renderHistorico();
+  }catch(e){
+    statusEl.textContent = "Configuração inválida: " + e.message;
+    statusEl.className = "status err";
+  }
+}
+
+initFirebase();
+
 // ---- Histórico ----
 function toggleHistorico(){
   const el = document.getElementById("historicoLista");
@@ -381,25 +429,59 @@ function toggleHistorico(){
   if(abrir) renderHistorico();
 }
 
-function getHistorico(){
+function getHistoricoLocal(){
   try{ return JSON.parse(localStorage.getItem("dpen_historico") || "[]"); }
   catch(e){ return []; }
 }
 
-function saveHistorico(entry){
-  const lista = getHistorico();
+async function saveHistorico(entry){
+  if(db){
+    try{
+      await db.collection("historico").add({
+        ...entry,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return;
+    }catch(e){
+      console.error("Falhou a gravar no Firestore, a guardar localmente:", e);
+    }
+  }
+  const lista = getHistoricoLocal();
   lista.unshift(entry);
   localStorage.setItem("dpen_historico", JSON.stringify(lista.slice(0,200)));
 }
 
-function renderHistorico(){
-  const lista = getHistorico();
+window._historicoCache = [];
+
+async function renderHistorico(){
+  const el = document.getElementById("historicoLista");
+  el.innerHTML = "<p class='hint'>A carregar…</p>";
+
+  if(db){
+    try{
+      const snap = await db.collection("historico").orderBy("criadoEm","desc").limit(200).get();
+      const lista = [];
+      snap.forEach(doc => lista.push({ id: doc.id, ...doc.data() }));
+      window._historicoCache = lista;
+      pintarHistorico(lista, true);
+      return;
+    }catch(e){
+      el.innerHTML = "<p class='hint'>Não foi possível carregar o histórico partilhado (" + e.message + "). A mostrar histórico local.</p>";
+    }
+  }
+  const lista = getHistoricoLocal();
+  window._historicoCache = lista;
+  pintarHistorico(lista, false);
+}
+
+function pintarHistorico(lista, partilhado){
   const el = document.getElementById("historicoLista");
   if(lista.length === 0){
-    el.innerHTML = "<p class='hint'>Ainda não há documentos gerados neste navegador.</p>";
+    el.innerHTML += "<p class='hint'>Ainda não há documentos gerados" + (partilhado ? "" : " neste navegador") + ".</p>";
     return;
   }
-  el.innerHTML = lista.map((doc, i) => `
+  el.innerHTML = (partilhado ? "" : "<p class='hint'>⚠ Histórico local (configure o Firebase acima para partilhar entre computadores).</p>") +
+    lista.map((doc, i) => `
     <div style="padding:8px 0; border-bottom:1px solid #eee; cursor:pointer;" onclick="carregarHistorico(${i})">
       <strong>${doc.assunto || "(sem assunto)"}</strong><br>
       <span class="hint">${doc.data || ""} · N/Refª ${doc.ref || "—"} · ${doc.destinatario || "—"}</span>
@@ -408,7 +490,7 @@ function renderHistorico(){
 }
 
 function carregarHistorico(i){
-  const doc = getHistorico()[i];
+  const doc = window._historicoCache[i];
   if(!doc) return;
   document.getElementById("tipoDoc").value = doc.tipo || "envio_expediente";
   document.getElementById("refNum").value = doc.refNum || "";
