@@ -263,6 +263,22 @@
   <!-- PRÉ-VISUALIZAÇÃO -->
   <div>
     <div class="card" style="margin-bottom:24px;">
+      <h2 style="margin-top:0;">Sessão</h2>
+      <div id="sessaoLogada" style="display:none;">
+        <span class="hint">Sessão iniciada como: <strong id="sessaoEmail"></strong></span>
+        <div class="btn-row"><button class="btn-secondary" onclick="terminarSessao()">Terminar sessão</button></div>
+      </div>
+      <div id="sessaoFormulario">
+        <label>Email</label>
+        <input type="text" id="loginEmail" placeholder="ex: nome@dpen.gov.mz">
+        <label>Palavra-passe</label>
+        <input type="password" id="loginSenha">
+        <div class="btn-row"><button class="btn-primary" onclick="iniciarSessao()">Entrar</button></div>
+        <div id="sessaoStatus" class="status"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px;">
       <h2 style="margin-top:0;">Histórico de documentos <button class="btn-secondary" style="float:right; padding:4px 10px; font-size:0.8rem;" onclick="toggleHistorico()">Mostrar/ocultar</button></h2>
       <div id="historicoLista" style="display:none; max-height:260px; overflow-y:auto; font-size:0.85rem;"></div>
       <details style="margin-top:12px;">
@@ -307,6 +323,7 @@
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const CARGO_TEXTO = {
@@ -314,16 +331,27 @@ const CARGO_TEXTO = {
   chefe_drh: { cargo: "O Chefe do DRH", nome: "Loio L.L Alimo\n/ ITPN1 /" }
 };
 
-const ABERTURAS = {
-  envio_expediente: "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, ",
-  resposta_vaga: "Em resposta ao pedido de disponibilidade de vaga, honra-nos comunicar o seguinte:",
-  pedido_vaga: "Deu entrada nesta Direcção Provincial de Educação do Niassa um processo que solicita a confirmação de existência de vaga, nos seguintes termos:",
-  parecer_despacho: "",
-  requisicao: "Havendo necessidade para o cumprimento das actividades do Departamento de Recursos Humanos, vimos por este meio requisitar a V. Excia os materiais abaixo mencionados:",
-  guia_marcha: "Segue apresentar-se ",
-  convocatoria: "Convoca-se os funcionários para participar na reunião, nos seguintes termos:",
-  comunicado: "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:"
+const ABERTURAS_ASSUNTO = {
+  "Envio de Expediente": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, ",
+  "Resposta do Pedido de Disponibilidade de Vaga": "Em resposta ao pedido de disponibilidade de vaga, honra-nos comunicar o seguinte:",
+  "Pedido de Existência de Vaga": "Deu entrada nesta Direcção Provincial de Educação do Niassa um processo que solicita a confirmação de existência de vaga, nos seguintes termos:",
+  "Transferência": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de transferência ",
+  "Mobilidade": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de mobilidade ",
+  "Parecer": "Excelência: ",
+  "Despacho": "",
+  "Requisição": "Havendo necessidade para o cumprimento das actividades do Departamento de Recursos Humanos, vimos por este meio requisitar a V. Excia os materiais abaixo mencionados:",
+  "Comunicado": "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:",
+  "Convocatória": "Convoca-se os funcionários para participar na reunião, nos seguintes termos:",
+  "Informação Salarial": "Em resposta ao pedido de informação salarial, junto desta temos a honra de enviar a V. Excia a informação abaixo:",
+  "Pedido de Parecer": "Para os devidos efeitos, junto desta se envia à V.Excia, um processo de pedido de parecer a favor de ",
+  "Devolução de processo": "A Direcção Provincial de Educação recebeu o processo abaixo mencionado, tendo-se constatado que o mesmo não procede, devendo para o efeito anexar os seguintes documentos:",
+  "Nomeação em comissão de serviço": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de nomeação em comissão de serviço a favor de ",
+  "Envio de fichas de classificação": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, as fichas de classificação referentes a ",
+  "Envio de plano de férias": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o plano de férias dos funcionários referente a ",
+  "Solicitação de Transferência de Funcionário": "Para o reforço do quadro de pessoal técnico da Direcção Provincial de Educação, junto desta, temos a honra de solicitar a V. Excia autorizar a transferência de ",
+  "Transcrição de Despacho": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de transcrever o despacho referente a "
 };
+const ABERTURA_GENERICA = "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:";
 
 function formatarDataPT(iso){
   if(!iso) return "";
@@ -396,9 +424,42 @@ function initFirebase(){
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
     db = firebase.firestore();
     document.getElementById("firebaseConfigInput").value = configStr;
+    firebase.auth().onAuthStateChanged(atualizarEstadoSessao);
   }catch(e){
     console.error("Erro ao iniciar Firebase:", e);
   }
+}
+
+function atualizarEstadoSessao(user){
+  const logado = document.getElementById("sessaoLogada");
+  const formulario = document.getElementById("sessaoFormulario");
+  if(user){
+    logado.style.display = "block";
+    formulario.style.display = "none";
+    document.getElementById("sessaoEmail").textContent = user.email;
+  } else {
+    logado.style.display = "none";
+    formulario.style.display = "block";
+  }
+  renderHistorico();
+}
+
+function iniciarSessao(){
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+  const statusEl = document.getElementById("sessaoStatus");
+  if(!db){
+    statusEl.textContent = "Configure primeiro o Firebase abaixo.";
+    statusEl.className = "status err";
+    return;
+  }
+  firebase.auth().signInWithEmailAndPassword(email, senha)
+    .then(()=>{ statusEl.textContent = ""; document.getElementById("loginSenha").value = ""; })
+    .catch(e=>{ statusEl.textContent = "Falhou: " + e.message; statusEl.className = "status err"; });
+}
+
+function terminarSessao(){
+  firebase.auth().signOut();
 }
 
 function guardarConfigFirebase(){
@@ -410,7 +471,8 @@ function guardarConfigFirebase(){
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
     else { firebase.app().delete().then(()=> firebase.initializeApp(config)); }
     db = firebase.firestore();
-    statusEl.textContent = "Configuração guardada. O histórico já está partilhado.";
+    firebase.auth().onAuthStateChanged(atualizarEstadoSessao);
+    statusEl.textContent = "Configuração guardada. Inicie sessão acima para usar o histórico partilhado.";
     statusEl.className = "status ok";
     renderHistorico();
   }catch(e){
@@ -435,11 +497,12 @@ function getHistoricoLocal(){
 }
 
 async function saveHistorico(entry){
-  if(db){
+  if(db && firebase.auth().currentUser){
     try{
       await db.collection("historico").add({
         ...entry,
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        criadoPor: firebase.auth().currentUser.email
       });
       return;
     }catch(e){
@@ -458,6 +521,10 @@ async function renderHistorico(){
   el.innerHTML = "<p class='hint'>A carregar…</p>";
 
   if(db){
+    if(!firebase.auth().currentUser){
+      el.innerHTML = "<p class='hint'>Inicie sessão acima para ver o histórico partilhado.</p>";
+      return;
+    }
     try{
       const snap = await db.collection("historico").orderBy("criadoEm","desc").limit(200).get();
       const lista = [];
@@ -537,13 +604,13 @@ async function gerarComIA(){
   const assunto = getAssunto();
   const destinatario = getDestinatario();
   const pontos = document.getElementById("pontos").value.trim();
-  const abertura = ABERTURAS[tipo] || "";
+  const abertura = ABERTURAS_ASSUNTO[assunto] || ABERTURA_GENERICA;
 
-  const prompt = `Escreva o corpo de um documento oficial moçambicano do tipo "${tipo}", em português formal de Moçambique, no estilo de um ofício da Direcção Provincial de Educação do Niassa.
+  const prompt = `Escreva o corpo de um documento oficial moçambicano, em português formal de Moçambique, no estilo de um ofício da Direcção Provincial de Educação do Niassa.
+O ASSUNTO deste documento é exactamente: "${assunto || "(não indicado)"}". Escreva apenas sobre este assunto — não escreva sobre transferência, vaga ou qualquer outro tema a não ser que o assunto seja precisamente esse.
 Destinatário: ${destinatario || "(não indicado)"}
-Assunto: ${assunto || "(não indicado)"}
-Pontos-chave a incluir:
-${pontos || "(nenhum fornecido — use uma redacção genérica adequada ao tipo de documento)"}
+Pontos-chave a incluir (use estes dados concretos; não invente nomes nem processos que não estejam aqui):
+${pontos || "(nenhum fornecido — escreva de forma genérica, mas sempre alinhada ao assunto indicado acima, deixando espaços em branco do tipo [nome] ou [data] onde normalmente haveria um dado específico)"}
 
 Regras:
 - Comece o texto (ou continue) a partir desta abertura padrão, sem repeti-la: "${abertura}"
