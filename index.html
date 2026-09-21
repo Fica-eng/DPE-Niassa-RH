@@ -263,22 +263,6 @@
   <!-- PRÉ-VISUALIZAÇÃO -->
   <div>
     <div class="card" style="margin-bottom:24px;">
-      <h2 style="margin-top:0;">Sessão</h2>
-      <div id="sessaoLogada" style="display:none;">
-        <span class="hint">Sessão iniciada como: <strong id="sessaoEmail"></strong></span>
-        <div class="btn-row"><button class="btn-secondary" onclick="terminarSessao()">Terminar sessão</button></div>
-      </div>
-      <div id="sessaoFormulario">
-        <label>Email</label>
-        <input type="text" id="loginEmail" placeholder="ex: nome@dpen.gov.mz">
-        <label>Palavra-passe</label>
-        <input type="password" id="loginSenha">
-        <div class="btn-row"><button class="btn-primary" onclick="iniciarSessao()">Entrar</button></div>
-        <div id="sessaoStatus" class="status"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:24px;">
       <h2 style="margin-top:0;">Histórico de documentos <button class="btn-secondary" style="float:right; padding:4px 10px; font-size:0.8rem;" onclick="toggleHistorico()">Mostrar/ocultar</button></h2>
       <div id="historicoLista" style="display:none; max-height:260px; overflow-y:auto; font-size:0.85rem;"></div>
       <details style="margin-top:12px;">
@@ -323,7 +307,6 @@
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 const CARGO_TEXTO = {
@@ -424,42 +407,9 @@ function initFirebase(){
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
     db = firebase.firestore();
     document.getElementById("firebaseConfigInput").value = configStr;
-    firebase.auth().onAuthStateChanged(atualizarEstadoSessao);
   }catch(e){
     console.error("Erro ao iniciar Firebase:", e);
   }
-}
-
-function atualizarEstadoSessao(user){
-  const logado = document.getElementById("sessaoLogada");
-  const formulario = document.getElementById("sessaoFormulario");
-  if(user){
-    logado.style.display = "block";
-    formulario.style.display = "none";
-    document.getElementById("sessaoEmail").textContent = user.email;
-  } else {
-    logado.style.display = "none";
-    formulario.style.display = "block";
-  }
-  renderHistorico();
-}
-
-function iniciarSessao(){
-  const email = document.getElementById("loginEmail").value.trim();
-  const senha = document.getElementById("loginSenha").value;
-  const statusEl = document.getElementById("sessaoStatus");
-  if(!db){
-    statusEl.textContent = "Configure primeiro o Firebase abaixo.";
-    statusEl.className = "status err";
-    return;
-  }
-  firebase.auth().signInWithEmailAndPassword(email, senha)
-    .then(()=>{ statusEl.textContent = ""; document.getElementById("loginSenha").value = ""; })
-    .catch(e=>{ statusEl.textContent = "Falhou: " + e.message; statusEl.className = "status err"; });
-}
-
-function terminarSessao(){
-  firebase.auth().signOut();
 }
 
 function guardarConfigFirebase(){
@@ -471,8 +421,7 @@ function guardarConfigFirebase(){
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
     else { firebase.app().delete().then(()=> firebase.initializeApp(config)); }
     db = firebase.firestore();
-    firebase.auth().onAuthStateChanged(atualizarEstadoSessao);
-    statusEl.textContent = "Configuração guardada. Inicie sessão acima para usar o histórico partilhado.";
+    statusEl.textContent = "Configuração guardada. O histórico já está partilhado.";
     statusEl.className = "status ok";
     renderHistorico();
   }catch(e){
@@ -497,12 +446,11 @@ function getHistoricoLocal(){
 }
 
 async function saveHistorico(entry){
-  if(db && firebase.auth().currentUser){
+  if(db){
     try{
       await db.collection("historico").add({
         ...entry,
-        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
-        criadoPor: firebase.auth().currentUser.email
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
       });
       return;
     }catch(e){
@@ -521,10 +469,6 @@ async function renderHistorico(){
   el.innerHTML = "<p class='hint'>A carregar…</p>";
 
   if(db){
-    if(!firebase.auth().currentUser){
-      el.innerHTML = "<p class='hint'>Inicie sessão acima para ver o histórico partilhado.</p>";
-      return;
-    }
     try{
       const snap = await db.collection("historico").orderBy("criadoEm","desc").limit(200).get();
       const lista = [];
