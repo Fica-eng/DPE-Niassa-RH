@@ -239,8 +239,9 @@
     <hr style="margin:20px 0; border:none; border-top:1px solid #eee;">
 
     <h2>2. Redacção assistida por IA (opcional)</h2>
-    <label>Pontos-chave (frases curtas, uma por linha)</label>
-    <textarea id="pontos" placeholder="ex:&#10;funcionário Cássimo Rachide Ali&#10;Docente N3, Classe C, Escalão 2&#10;em exercício no SDEJT de Liupo, Nampula&#10;pretende transferir para Mandimba&#10;solicitar confirmação de vaga"></textarea>
+    <div id="camposDinamicos"></div>
+    <label>Outras informações (opcional)</label>
+    <textarea id="pontosExtra" placeholder="Qualquer outro pormenor que não esteja nos campos acima"></textarea>
     <div class="hint">A IA escreve o corpo do texto em português formal moçambicano, seguindo o estilo dos seus ofícios.</div>
 
     <details>
@@ -310,6 +311,187 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const LOCALIDADES = [
+  "SDEJT de Lichinga","SDEJT de Mecanhelas","SDEJT de Mandimba","SDEJT de Majune",
+  "SDEJT de Chimbunila","SDEJT de Nipepe","SDEJT de Ngaúma","SDEJT de Lago",
+  "SDEJT de Cuamba","SDEJT de Sanga","Direcção Provincial de Educação do Niassa"
+];
+
+// Cada assunto define os campos estruturados que a IA vai usar.
+// tipo "select" mostra um dropdown com opção "Outro" que abre um campo de texto.
+const CAMPOS_POR_ASSUNTO = {
+  "Transferência": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"classe", label:"Classe", tipo:"text", placeholder:"ex: E" },
+    { id:"escalao", label:"Escalão", tipo:"text", placeholder:"ex: 1" },
+    { id:"exercicio", label:"Em exercício no", tipo:"select", opcoes:LOCALIDADES },
+    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES }
+  ],
+  "Mobilidade": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"classe", label:"Classe", tipo:"text", placeholder:"ex: E" },
+    { id:"escalao", label:"Escalão", tipo:"text", placeholder:"ex: 1" },
+    { id:"exercicio", label:"Em exercício no", tipo:"select", opcoes:LOCALIDADES },
+    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES }
+  ],
+  "Solicitação de Transferência de Funcionário": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"exercicio", label:"Em exercício no", tipo:"select", opcoes:LOCALIDADES },
+    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES },
+    { id:"motivo", label:"Motivo da solicitação", tipo:"text", placeholder:"ex: reforço do quadro de pessoal" }
+  ],
+  "Parecer": [
+    { id:"nome", label:"Nome completo / processo em causa", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"origem", label:"Entidade de origem do processo", tipo:"text", placeholder:"ex: SDEJT de Lichinga" },
+    { id:"assuntoParecer", label:"Sobre o que é o parecer", tipo:"text", placeholder:"ex: pedido de licença sem vencimento" },
+    { id:"recomendacao", label:"Recomendação", tipo:"select", opcoes:["Favorável","Desfavorável"] }
+  ],
+  "Pedido de Parecer": [
+    { id:"nome", label:"Nome completo / processo em causa", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"assuntoParecer", label:"Sobre o que se pede parecer", tipo:"text", placeholder:"ex: reclassificação profissional" }
+  ],
+  "Despacho": [
+    { id:"processo", label:"Processo / assunto em despacho", tipo:"text", placeholder:"ex: pedido de licença de Filipe Carlitos Alfredo" },
+    { id:"decisao", label:"Decisão / teor do despacho", tipo:"text", placeholder:"ex: deferido / indeferido, e porquê" }
+  ],
+  "Transcrição de Despacho": [
+    { id:"refOriginal", label:"Referência do despacho original", tipo:"text", placeholder:"ex: 012/GP-N/2026" },
+    { id:"dataOriginal", label:"Data do despacho original", tipo:"text", placeholder:"ex: 10 de Março de 2026" },
+    { id:"conteudo", label:"Conteúdo/decisão a transcrever", tipo:"text", placeholder:"ex: autorização de mobilidade" }
+  ],
+  "Requisição": [
+    { id:"materiais", label:"Materiais a requisitar (com quantidades)", tipo:"text", placeholder:"ex: 2 resmas de papel A4, 5 canetas" },
+    { id:"finalidade", label:"Finalidade", tipo:"text", placeholder:"ex: actividades correntes do DRH" }
+  ],
+  "Convocatória": [
+    { id:"dataReuniao", label:"Data e hora da reunião", tipo:"text", placeholder:"ex: 30 de Setembro de 2026, 09:00" },
+    { id:"local", label:"Local", tipo:"text", placeholder:"ex: Sala de reuniões da DPE" },
+    { id:"agenda", label:"Motivo / agenda", tipo:"text", placeholder:"ex: balanço trimestral do DRH" }
+  ],
+  "Informação Salarial": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"mesRef", label:"Mês/ano de referência", tipo:"text", placeholder:"ex: Setembro de 2026" }
+  ],
+  "Devolução de processo": [
+    { id:"numProcesso", label:"Nº do processo", tipo:"text", placeholder:"ex: 045/DRH/2026" },
+    { id:"motivo", label:"Motivo da devolução", tipo:"text", placeholder:"ex: falta de assinatura" },
+    { id:"emFalta", label:"Documentos em falta", tipo:"text", placeholder:"ex: cópia do BI, declaração médica" }
+  ],
+  "Nomeação em comissão de serviço": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"cargo", label:"Cargo a nomear", tipo:"text", placeholder:"ex: Director Adjunto Pedagógico" },
+    { id:"local", label:"Instituição / local de exercício", tipo:"select", opcoes:LOCALIDADES },
+    { id:"dataInicio", label:"Data de início", tipo:"text", placeholder:"ex: 1 de Outubro de 2026" }
+  ],
+  "Envio de fichas de classificação": [
+    { id:"anoRef", label:"Ano lectivo de referência", tipo:"text", placeholder:"ex: 2026" },
+    { id:"quantidade", label:"Nº de fichas enviadas", tipo:"text", placeholder:"ex: 120" },
+    { id:"origem", label:"Distrito/escola de origem", tipo:"select", opcoes:LOCALIDADES }
+  ],
+  "Envio de plano de férias": [
+    { id:"anoRef", label:"Ano de referência", tipo:"text", placeholder:"ex: 2027" },
+    { id:"sector", label:"Departamento/sector", tipo:"text", placeholder:"ex: DRH" }
+  ],
+  "Envio de Expediente": [
+    { id:"descricao", label:"Descrição do expediente enviado", tipo:"text", placeholder:"ex: processo de aposentação de Filipe Carlitos Alfredo" }
+  ],
+  "Comunicado": [
+    { id:"paraQuem", label:"Destinado a", tipo:"text", placeholder:"ex: todos os funcionários do DRH" },
+    { id:"conteudo", label:"Conteúdo essencial", tipo:"text", placeholder:"ex: novo horário de atendimento" }
+  ],
+  "Resposta do Pedido de Disponibilidade de Vaga": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"local", label:"Local pretendido", tipo:"select", opcoes:LOCALIDADES },
+    { id:"haVaga", label:"Há vaga?", tipo:"select", opcoes:["Sim","Não"] }
+  ],
+  "Pedido de Existência de Vaga": [
+    { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
+    { id:"categoria", label:"Categoria", tipo:"text", placeholder:"ex: DN1" },
+    { id:"local", label:"Local pretendido", tipo:"select", opcoes:LOCALIDADES }
+  ]
+};
+
+function renderCamposDinamicos(){
+  const container = document.getElementById("camposDinamicos");
+  const assunto = getAssunto();
+  const campos = CAMPOS_POR_ASSUNTO[assunto];
+  container.innerHTML = "";
+  if(!campos){
+    container.innerHTML = `<label>Pontos-chave (frases curtas, uma por linha)</label>
+      <textarea id="pontosGenerico" placeholder="ex: nome, categoria, o que pretende..."></textarea>`;
+    document.getElementById("pontosGenerico").addEventListener("input", ()=>{});
+    return;
+  }
+  campos.forEach(campo => {
+    const label = document.createElement("label");
+    label.textContent = campo.label;
+    container.appendChild(label);
+
+    if(campo.tipo === "select"){
+      const sel = document.createElement("select");
+      sel.id = "campo_" + campo.id;
+      sel.innerHTML = `<option value="">— Seleccionar —</option>` +
+        campo.opcoes.map(o=>`<option>${o}</option>`).join("") +
+        `<option value="outro">Outro (escrever)</option>`;
+      container.appendChild(sel);
+
+      const outro = document.createElement("input");
+      outro.type = "text";
+      outro.id = "campo_" + campo.id + "_outro";
+      outro.placeholder = "Escreva: " + campo.label.toLowerCase();
+      outro.style.display = "none";
+      outro.style.marginTop = "6px";
+      container.appendChild(outro);
+
+      sel.addEventListener("change", ()=>{
+        outro.style.display = sel.value === "outro" ? "block" : "none";
+        if(sel.value === "outro") outro.focus();
+      });
+    } else {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = "campo_" + campo.id;
+      input.placeholder = campo.placeholder || "";
+      container.appendChild(input);
+    }
+  });
+}
+
+function coletarPontosDinamicos(){
+  const assunto = getAssunto();
+  const campos = CAMPOS_POR_ASSUNTO[assunto];
+  const linhas = [];
+  if(!campos){
+    const generico = document.getElementById("pontosGenerico");
+    if(generico && generico.value.trim()) linhas.push(generico.value.trim());
+  } else {
+    campos.forEach(campo => {
+      let valor;
+      if(campo.tipo === "select"){
+        const sel = document.getElementById("campo_" + campo.id);
+        valor = sel.value === "outro"
+          ? document.getElementById("campo_" + campo.id + "_outro").value.trim()
+          : sel.value;
+      } else {
+        valor = document.getElementById("campo_" + campo.id).value.trim();
+      }
+      if(valor) linhas.push(campo.label + ": " + valor);
+    });
+  }
+  const extra = document.getElementById("pontosExtra").value.trim();
+  if(extra) linhas.push(extra);
+  return linhas.join("\n");
+}
+
+document.getElementById("assuntoSelect").addEventListener("change", renderCamposDinamicos);
+document.getElementById("assuntoOutro").addEventListener("input", renderCamposDinamicos);
+renderCamposDinamicos();
+
 const CARGO_TEXTO = {
   director: { cargo: "O Director Provincial", nome: "Matias Félix Chapungo\n/ Especialista de Educação /" },
   chefe_drh: { cargo: "O Chefe do DRH", nome: "Loio L.L Alimo\n/ ITPN1 /" }
@@ -555,7 +737,7 @@ async function gerarComIA(){
   const tipo = document.getElementById("tipoDoc").value;
   const assunto = getAssunto();
   const destinatario = getDestinatario();
-  const pontos = document.getElementById("pontos").value.trim();
+  const pontos = coletarPontosDinamicos();
   const abertura = ABERTURAS_ASSUNTO[assunto] || ABERTURA_GENERICA;
 
   const prompt = `Escreva o corpo de um documento oficial moçambicano, em português formal de Moçambique, no estilo de um ofício da Direcção Provincial de Educação do Niassa.
