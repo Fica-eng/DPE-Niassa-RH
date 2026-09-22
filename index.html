@@ -188,6 +188,12 @@
       <option>SDEJT de Lago</option>
       <option>SDEJT de Cuamba</option>
       <option>SDEJT de Sanga</option>
+      <option>SDEJT de Metarica</option>
+      <option>SDEJT de Marrupa</option>
+      <option>SDEJT de Muembe</option>
+      <option>SDEJT de Maúa</option>
+      <option>SDEJT de Mecula</option>
+      <option>SDEJT de Mavago</option>
       <option>Direcção Provincial de Educação de Nampula</option>
       <option>Direcção Provincial de Educação de Zambézia</option>
       <option>Tribunal Administrativo Provincial do Niassa</option>
@@ -311,10 +317,22 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+const MATERIAIS_REQUISICAO = [
+  "Resma de papel A4","Resma de papel A3","Canetas esferográficas","Lápis",
+  "Borrachas","Marcadores/Fitas correctoras","Grampeador","Agrafos","Clipes",
+  "Pastas de arquivo","Post-it","Tinteiro/toner para impressora","Pen drive",
+  "Envelopes A4","Carimbo","Almofada de carimbo","Cola","Tesoura","Régua",
+  "Calculadora","Cadernos","Blocos de notas","Dossier/arquivador","Fita adesiva",
+  "Papel químico (carbono)","Livro de registo/protocolo","Cartuchos de tinta"
+];
+const QUANTIDADES_OPCOES = ["1","2","3","5","10","20","50","100","Outro"];
+
 const LOCALIDADES = [
   "SDEJT de Lichinga","SDEJT de Mecanhelas","SDEJT de Mandimba","SDEJT de Majune",
   "SDEJT de Chimbunila","SDEJT de Nipepe","SDEJT de Ngaúma","SDEJT de Lago",
-  "SDEJT de Cuamba","SDEJT de Sanga","Direcção Provincial de Educação do Niassa"
+  "SDEJT de Cuamba","SDEJT de Sanga","SDEJT de Metarica","SDEJT de Marrupa",
+  "SDEJT de Muembe","SDEJT de Maúa","SDEJT de Mecula","SDEJT de Mavago",
+  "Direcção Provincial de Educação do Niassa"
 ];
 
 // Cada assunto define os campos estruturados que a IA vai usar.
@@ -363,7 +381,7 @@ const CAMPOS_POR_ASSUNTO = {
     { id:"conteudo", label:"Conteúdo/decisão a transcrever", tipo:"text", placeholder:"ex: autorização de mobilidade" }
   ],
   "Requisição": [
-    { id:"materiais", label:"Materiais a requisitar (com quantidades)", tipo:"text", placeholder:"ex: 2 resmas de papel A4, 5 canetas" },
+    { id:"materiais", label:"Materiais a requisitar", tipo:"materiais" },
     { id:"finalidade", label:"Finalidade", tipo:"text", placeholder:"ex: actividades correntes do DRH" }
   ],
   "Convocatória": [
@@ -452,6 +470,46 @@ function renderCamposDinamicos(){
         outro.style.display = sel.value === "outro" ? "block" : "none";
         if(sel.value === "outro") outro.focus();
       });
+    } else if(campo.tipo === "materiais"){
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "border:1px solid #eee; border-radius:6px; padding:10px; max-height:260px; overflow-y:auto;";
+      MATERIAIS_REQUISICAO.forEach((mat, idx) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex; align-items:center; gap:8px; margin-bottom:6px;";
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.id = "mat_" + idx;
+        const lbl = document.createElement("label");
+        lbl.textContent = mat;
+        lbl.htmlFor = chk.id;
+        lbl.style.cssText = "flex:1; margin:0; font-weight:normal;";
+        const qtd = document.createElement("select");
+        qtd.id = "matqtd_" + idx;
+        qtd.style.width = "80px";
+        qtd.innerHTML = QUANTIDADES_OPCOES.map(q=>`<option>${q}</option>`).join("");
+        const qtdOutro = document.createElement("input");
+        qtdOutro.type = "text";
+        qtdOutro.id = "matqtdoutro_" + idx;
+        qtdOutro.placeholder = "qtd";
+        qtdOutro.style.cssText = "width:60px; display:none;";
+        qtd.addEventListener("change", ()=>{ qtdOutro.style.display = qtd.value === "Outro" ? "inline-block" : "none"; });
+        row.appendChild(chk); row.appendChild(lbl); row.appendChild(qtd); row.appendChild(qtdOutro);
+        wrap.appendChild(row);
+      });
+      container.appendChild(wrap);
+
+      const outroRow = document.createElement("div");
+      outroRow.style.cssText = "display:flex; gap:8px; margin-top:8px;";
+      const outroNome = document.createElement("input");
+      outroNome.type = "text"; outroNome.id = "materiais_outro_nome";
+      outroNome.placeholder = "Outro material não listado (opcional)";
+      outroNome.style.flex = "2";
+      const outroQtd = document.createElement("input");
+      outroQtd.type = "text"; outroQtd.id = "materiais_outro_qtd";
+      outroQtd.placeholder = "quantidade";
+      outroQtd.style.flex = "1";
+      outroRow.appendChild(outroNome); outroRow.appendChild(outroQtd);
+      container.appendChild(outroRow);
     } else {
       const input = document.createElement("input");
       input.type = "text";
@@ -471,6 +529,26 @@ function coletarPontosDinamicos(){
     if(generico && generico.value.trim()) linhas.push(generico.value.trim());
   } else {
     campos.forEach(campo => {
+      if(campo.tipo === "materiais"){
+        const itens = [];
+        MATERIAIS_REQUISICAO.forEach((mat, idx) => {
+          const chk = document.getElementById("mat_" + idx);
+          if(chk && chk.checked){
+            const qtdSel = document.getElementById("matqtd_" + idx);
+            const qtd = qtdSel.value === "Outro"
+              ? document.getElementById("matqtdoutro_" + idx).value.trim()
+              : qtdSel.value;
+            itens.push(mat + " (" + (qtd || "qtd. a definir") + ")");
+          }
+        });
+        const outroNome = document.getElementById("materiais_outro_nome").value.trim();
+        if(outroNome){
+          const outroQtd = document.getElementById("materiais_outro_qtd").value.trim();
+          itens.push(outroNome + " (" + (outroQtd || "qtd. a definir") + ")");
+        }
+        if(itens.length) linhas.push(campo.label + ": " + itens.join(", "));
+        return;
+      }
       let valor;
       if(campo.tipo === "select"){
         const sel = document.getElementById("campo_" + campo.id);
