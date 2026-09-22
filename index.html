@@ -265,7 +265,8 @@
     <div class="card" style="margin-bottom:24px;">
       <h2 style="margin-top:0;">Histórico de documentos <button class="btn-secondary" style="float:right; padding:4px 10px; font-size:0.8rem;" onclick="toggleHistorico()">Mostrar/ocultar</button></h2>
       <div id="historicoLista" style="display:none; max-height:260px; overflow-y:auto; font-size:0.85rem;"></div>
-      <details style="margin-top:12px;">
+      <p id="firebaseConfigurado" class="hint" style="display:none; margin-top:12px;">✓ Histórico partilhado activo. <a href="#" onclick="document.getElementById('firebaseConfigurado').style.display='none'; document.getElementById('firebaseDetails').style.display='block'; return false;">Alterar configuração</a></p>
+      <details id="firebaseDetails" style="margin-top:12px;">
         <summary>Configurar armazenamento partilhado (Firebase, gratuito) — necessário só uma vez</summary>
         <div class="hint" style="margin:8px 0;">Sem isto, o histórico fica preso a este navegador. Com isto, fica visível em qualquer computador que abra o site.</div>
         <label>Configuração do Firebase (cole aqui o objecto firebaseConfig)</label>
@@ -399,6 +400,11 @@ function atualizarPreview(){
 // ---- Firebase (armazenamento partilhado do histórico) ----
 let db = null;
 
+function mostrarComoConfigurado(){
+  document.getElementById("firebaseDetails").style.display = "none";
+  document.getElementById("firebaseConfigurado").style.display = "block";
+}
+
 function initFirebase(){
   const configStr = localStorage.getItem("dpen_firebase_config");
   if(!configStr) return;
@@ -407,6 +413,7 @@ function initFirebase(){
     if(!firebase.apps || !firebase.apps.length){ firebase.initializeApp(config); }
     db = firebase.firestore();
     document.getElementById("firebaseConfigInput").value = configStr;
+    mostrarComoConfigurado();
   }catch(e){
     console.error("Erro ao iniciar Firebase:", e);
   }
@@ -424,6 +431,7 @@ function guardarConfigFirebase(){
     statusEl.textContent = "Configuração guardada. O histórico já está partilhado.";
     statusEl.className = "status ok";
     renderHistorico();
+    mostrarComoConfigurado();
   }catch(e){
     statusEl.textContent = "Configuração inválida: " + e.message;
     statusEl.className = "status err";
