@@ -597,6 +597,29 @@ const ABERTURAS_ASSUNTO = {
 };
 const ABERTURA_GENERICA = "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:";
 
+// Exemplos reais (anonimizados quando necessário) tirados dos seus próprios ofícios,
+// usados só como referência de estilo para a IA — nunca copiados literalmente para o documento novo.
+const EXEMPLOS_ASSUNTO = {
+  "Envio de Expediente": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o ofício nº 79/MINEDH/GM/SP/2023, sobre o cálculo do valor do prémio dos incentivos às escolas e aos SDEJT no âmbito do projecto Moz Learning.",
+  "Transferência": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de transferência do senhor Lester Chimbeta Kaunda.",
+  "Mobilidade": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de transferência para efeitos de anotação da senhora Cesária da Inácia Combe.",
+  "Solicitação de Transferência de Funcionário": "Para o reforço do quadro de pessoal técnico da Direcção Provincial de Educação, junto desta, temos a honra de solicitar a V. Excia autorizar a transferência do senhor Nelson João, enquadrado na carreira de Docente de N1, Classe C, Escalão 1, em exercício nos Serviços Distritais de Educação Juventude e Tecnologia de Nipepe, para esta Direcção Provincial de Educação.",
+  "Parecer": "A Direcção Provincial de Educação recebeu, através da nota nº 550/CEPN/GG/RGERH/025.5/2023 de 27 de Março, uma solicitação de transferência para preencher o quadro de pessoal do Ministério da Educação e Desenvolvimento Humano a favor do senhor Enio Henriques, funcionário desta Direcção, a qual mereceu o seguinte despacho: nos termos do nº 4 do artigo 27 do Estatuto Geral dos Funcionários e Agente do Estado, aprovado pela Lei nº 4/2022 de 11 de Fevereiro, conjugado com o nº 5 do artigo 18 do Regulamento do mesmo Estatuto, aprovado pelo Decreto nº 28/2022 de 17 de Junho, não temos objecção ao pedido, propondo que seja autorizado.",
+  "Despacho": "Nos termos dos nºs 1 e 4 do artigo 27 do Estatuto Geral dos Funcionários e Agente do Estado, aprovado pela Lei nº 4/2022 de 11 de Fevereiro, conjugado com os nºs 1 e 3 do artigo 19 do Regulamento do mesmo Estatuto, propomos a mobilidade da senhora Lúcia de Nascimento Amós, funcionária enquadrada na carreira de Docente N3, Classe C, Escalão 2, em exercício nesta Direcção Provincial, para o Serviço Distrital de Educação, Juventude e Tecnologia de Lichinga. Deixamos ao mais alto critério de V. Excia a decisão.",
+  "Transcrição de Despacho": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de transcrever o despacho do Exmo. Senhor Director referente ao pedido de licença de paternidade do senhor Bernardo Carnete Suete, tendo recaído no seguinte teor: \"Autorizo\".",
+  "Requisição": "Havendo necessidade para o cumprimento das actividades do Departamento de Recursos Humanos, vimos por este meio requisitar a V. Excia os materiais abaixo mencionados: 6 resmas de papel A4; 1 toner 118; 1 toner 26; 2 agrafadores pequenos; 2 correctores; 4 embalagens de envelopes A4; 6 autocolantes; 3 furadores; 6 saca-grampos.",
+  "Convocatória": "Convoca-se os funcionários do Departamento de Recursos Humanos para participar na reunião do Departamento, a ter lugar no dia 31 de Maio, pelas 9 horas, com os seguintes pontos da agenda: 1. Balanço das actividades do mês de Maio; 2. Plano das actividades para o mês de Junho; 3. Diversos.",
+  "Informação Salarial": "Em resposta à nota nº 609/TJPN/5ª SCM/2023, de 1 de Setembro, que solicita informação salarial a favor da senhora Natércia de Eliseu João Macia, funcionária do quadro privativo do Distrito de Lichinga, afecta ao SDEJT, exercendo funções na Escola Primária Completa de Namacula, junto desta temos a honra de enviar a V. Excia a Declaração de Rendimento Mensal em anexo.",
+  "Devolução de processo": "A Direcção Provincial de Educação recebeu, através da nota nº 2078/SDEJTC/023.4/2023, de 29 de Dezembro, um processo de nomeação em comissão de serviço a favor da senhora Adija João Amir. Da verificação feita, constatou-se que o mesmo não procede, devendo para o efeito anexar os seguintes documentos: declaração de cabimento orçamental actualizada; ficha de avaliação de desempenho referente ao ano de 2023.",
+  "Nomeação em comissão de serviço": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o processo de nomeação em comissão de serviço a favor da senhora Felismina Jorge Zilale Canimbila, devidamente visado pelo Tribunal Administrativo da Província de Maputo.",
+  "Envio de fichas de classificação": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, 16 fichas de classificação referentes ao ano de 2023.",
+  "Envio de plano de férias": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de enviar à V. Excia, o plano de férias dos funcionários da DPE referente ao ano de 2024.",
+  "Comunicado": "Para os devidos efeitos e fins julgados convenientes, junto desta, temos a honra de solicitar a V. Excia que o senhor acima citado compareça no Departamento de Recursos Humanos da Direcção Provincial de Educação até ao dia 16 do mês em curso.",
+  "Resposta do Pedido de Disponibilidade de Vaga": "Em resposta à nota nº 208/CEPN/DGERH/025.5/2023, proveniente do Gabinete do Governador da Província do Niassa, a favor do senhor Salmo Juma, enquadrado na carreira de Auxiliar Técnico, em exercício no Comando Provincial do Niassa, o qual pretende transferir para esta Instituição, honra-nos comunicar o seguinte: \"Há vaga para o efeito\".",
+  "Pedido de Existência de Vaga": "Deu entrada nesta Direcção Provincial de Educação do Niassa um processo no qual se solicita a existência de vaga a favor do senhor Cássimo Rachide Ali, enquadrado na carreira de Docente de N3, Classe C, Escalão 2, em exercício no SDEJT de Liupo, Província de Nampula, o qual pretende transferir para o Distrito de Mandimba, Província do Niassa. Para o efeito, solicitamos a V. Excia a confirmação da disponibilidade de vaga, nos termos dos nºs 1 e 4 do Estatuto Geral dos Funcionários e Agente do Estado, aprovado pela Lei nº 4/2022 de 11 de Fevereiro, conjugado com os nºs 3 e 5 do artigo 19 do respectivo Regulamento, aprovado pelo Decreto nº 28/2022 de 17 de Junho.",
+  "Pedido de Parecer": "Para os devidos efeitos, junto desta se envia à V. Excia um processo de pedido de parecer a favor da senhora Regina Issufo, funcionária desta."
+};
+
 function formatarDataPT(iso){
   if(!iso) return "";
   const [y,m,d] = iso.split("-");
@@ -817,16 +840,18 @@ async function gerarComIA(){
   const destinatario = getDestinatario();
   const pontos = coletarPontosDinamicos();
   const abertura = ABERTURAS_ASSUNTO[assunto] || ABERTURA_GENERICA;
+  const exemplo = EXEMPLOS_ASSUNTO[assunto];
 
-  const prompt = `Escreva o corpo de um documento oficial moçambicano, em português formal de Moçambique, no estilo de um ofício da Direcção Provincial de Educação do Niassa.
+  const prompt = `Escreva o corpo de um documento oficial moçambicano, em português formal de Moçambique, seguindo rigorosamente o estilo e a estrutura dos ofícios reais da Direcção Provincial de Educação do Niassa.
 O ASSUNTO deste documento é exactamente: "${assunto || "(não indicado)"}". Escreva apenas sobre este assunto — não escreva sobre transferência, vaga ou qualquer outro tema a não ser que o assunto seja precisamente esse.
-Destinatário: ${destinatario || "(não indicado)"}
+${exemplo ? `Exemplo real de um documento com este mesmo assunto, escrito por esta Direcção (siga este padrão de estrutura, tom e nível de formalidade — NÃO copie os nomes, números ou factos deste exemplo, apenas o estilo de escrita):\n"${exemplo}"\n` : ""}Destinatário: ${destinatario || "(não indicado)"}
 Pontos-chave a incluir (use estes dados concretos; não invente nomes nem processos que não estejam aqui):
 ${pontos || "(nenhum fornecido — escreva de forma genérica, mas sempre alinhada ao assunto indicado acima, deixando espaços em branco do tipo [nome] ou [data] onde normalmente haveria um dado específico)"}
 
 Regras:
 - O texto final vai começar, obrigatoriamente, por esta frase fixa que já está definida e não deve ser reescrita nem parafraseada: "${abertura}"
 - Por isso, NÃO escreva essa frase (nem nenhuma variação dela) na sua resposta. Comece a sua resposta directamente a seguir a ela — ou seja, vá directo aos dados/conteúdo (ex.: a lista de materiais, o nome do funcionário, a decisão, etc.), sem nenhuma frase introdutória própria.
+- Escreva em português de Moçambique cuidado e gramaticalmente correcto: verifique e corrija qualquer erro ortográfico, de acentuação, de concordância verbal (sujeito-verbo) e de concordância nominal (género/número) antes de responder — mesmo que os pontos-chave fornecidos contenham esses erros, o texto final deve sair sem eles.
 - Tom formal, directo, terceira pessoa ("temos a honra de", "honra-nos comunicar", "V. Excia").
 - Cite a legislação aplicável apenas se fizer sentido (ex: Lei nº 4/2022 de 11 de Fevereiro; Decreto nº 28/2022 de 17 de Junho).
 - Termine com "Cordiais Saudações." numa linha própria.
