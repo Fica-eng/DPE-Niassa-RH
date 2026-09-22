@@ -825,11 +825,12 @@ Pontos-chave a incluir (use estes dados concretos; não invente nomes nem proces
 ${pontos || "(nenhum fornecido — escreva de forma genérica, mas sempre alinhada ao assunto indicado acima, deixando espaços em branco do tipo [nome] ou [data] onde normalmente haveria um dado específico)"}
 
 Regras:
-- Comece o texto (ou continue) a partir desta abertura padrão, sem repeti-la: "${abertura}"
+- O texto final vai começar, obrigatoriamente, por esta frase fixa que já está definida e não deve ser reescrita nem parafraseada: "${abertura}"
+- Por isso, NÃO escreva essa frase (nem nenhuma variação dela) na sua resposta. Comece a sua resposta directamente a seguir a ela — ou seja, vá directo aos dados/conteúdo (ex.: a lista de materiais, o nome do funcionário, a decisão, etc.), sem nenhuma frase introdutória própria.
 - Tom formal, directo, terceira pessoa ("temos a honra de", "honra-nos comunicar", "V. Excia").
 - Cite a legislação aplicável apenas se fizer sentido (ex: Lei nº 4/2022 de 11 de Fevereiro; Decreto nº 28/2022 de 17 de Junho).
 - Termine com "Cordiais Saudações." numa linha própria.
-- Não inclua cabeçalho, destinatário, data nem assinatura — só o corpo do texto.
+- Não inclua cabeçalho, destinatário, data nem assinatura — só o corpo do texto, a começar directamente pelo conteúdo (sem a frase de abertura, que já será acrescentada automaticamente).
 - Responda apenas com o texto final, sem comentários.`;
 
   setStatus("A gerar rascunho...", "");
@@ -845,8 +846,13 @@ Regras:
     if(!resp.ok){
       throw new Error(data?.error?.message || "Erro na chamada à API");
     }
-    const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    let texto = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if(!texto) throw new Error("A IA não devolveu texto.");
+    // Remoção defensiva: se a IA repetir a abertura no início, apesar da instrução, retira-se aqui.
+    const aberturaLimpa = abertura.trim().toLowerCase();
+    if(aberturaLimpa && texto.toLowerCase().startsWith(aberturaLimpa)){
+      texto = texto.slice(abertura.trim().length).trim();
+    }
     document.getElementById("corpo").value = (abertura + " " + texto).replace(/\s+/g," ").trim();
     atualizarPreview();
     setStatus("Rascunho gerado. Reveja e ajuste antes de descarregar.", "ok");
