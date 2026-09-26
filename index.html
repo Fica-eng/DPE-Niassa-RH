@@ -143,6 +143,7 @@
       <option value="resposta_vaga">Ofício — Resposta a Pedido de Disponibilidade de Vaga</option>
       <option value="pedido_vaga">Ofício — Pedido de Existência de Vaga</option>
       <option value="parecer_despacho">Parecer / Despacho</option>
+      <option value="informacao_proposta">Informação Proposta (com caixa de Parecer/Despacho)</option>
       <option value="requisicao">Requisição de Material</option>
       <option value="guia_marcha">Guia de Marcha</option>
       <option value="convocatoria">Convocatória</option>
@@ -301,6 +302,12 @@
         </div>
         <div class="assunto" id="p-assunto"></div>
         <div class="corpo" id="p-corpo"></div>
+        <div id="p-infoproposta-box" style="display:none; margin-top:24px; border:1px solid #000;">
+          <div style="display:flex;">
+            <div style="flex:1; border-right:1px solid #000; padding:10px; min-height:90px;"><strong>PARECER:</strong></div>
+            <div style="flex:1; padding:10px; min-height:90px;"><strong>DESPACHO:</strong></div>
+          </div>
+        </div>
         <div class="assinatura">
           <div class="cargo" id="p-cargo"></div>
           <div id="p-nome"></div>
@@ -663,12 +670,22 @@ function atualizarPreview(){
   const assunto = getAssunto();
   const corpo = document.getElementById("corpo").value.trim();
   const assinante = document.getElementById("assinante").value;
+  const tipo = document.getElementById("tipoDoc").value;
+  const ehInfoProposta = tipo === "informacao_proposta";
 
   document.getElementById("p-destinatario").textContent = destinatario ? "Ao: " + destinatario : "";
-  document.getElementById("p-ref").textContent = ref ? "N/Refª " + ref : "";
-  document.getElementById("p-data").textContent = formatarDataPT(data);
+
+  if(ehInfoProposta){
+    document.getElementById("p-ref").innerHTML = "<strong>INFORMAÇÃO PROPOSTA Nº " + (document.getElementById("refNum").value.trim() || "___") + "/DPEN/DRH/023</strong>";
+    document.getElementById("p-data").textContent = formatarDataPT(data);
+  } else {
+    document.getElementById("p-ref").innerHTML = ref ? "N/Refª " + ref : "";
+    document.getElementById("p-data").textContent = formatarDataPT(data);
+  }
+
   document.getElementById("p-assunto").textContent = assunto ? "Assunto: " + assunto : "";
   document.getElementById("p-corpo").textContent = corpo;
+  document.getElementById("p-infoproposta-box").style.display = ehInfoProposta ? "block" : "none";
 
   const info = CARGO_TEXTO[assinante];
   document.getElementById("p-cargo").textContent = info.cargo;
