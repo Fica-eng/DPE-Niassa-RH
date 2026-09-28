@@ -114,7 +114,8 @@
   }
   #doc .cabecalho .lichinga{ font-weight:normal; }
   #doc .destinatario{ margin-bottom: 4px; }
-  #doc .ref-data{ display:flex; justify-content:space-between; margin: 10px 0; }
+  #doc table.ref-data{ width:100%; border-collapse:collapse; margin: 10px 0; }
+  #doc table.ref-data td{ padding:0; vertical-align:top; }
   #doc .assunto{ font-weight:bold; margin-bottom: 14px; }
   #doc .corpo{ text-align: justify; white-space: pre-wrap; }
   #doc .assinatura{ margin-top: 46px; text-align:center; }
@@ -176,6 +177,8 @@
     <select id="destinatarioSelect">
       <option value="">— Seleccionar —</option>
       <option>Gabinete do Governador da Província do Niassa</option>
+      <option>Senhora Governadora da Província do Niassa</option>
+      <option>Senhor Governador da Província do Niassa</option>
       <option>Governo do Distrito de Lichinga</option>
       <option>Governo do Distrito de Mecanhelas</option>
       <option>Governo do Distrito de Mandimba</option>
@@ -295,19 +298,21 @@
           DIRECÇÃO PROVINCIAL DE EDUCAÇÃO<br>
           <span class="lichinga">= Lichinga =</span>
         </div>
+        <div id="p-info-topo" style="display:none;">
+          <div id="p-info-titulo" style="text-align:center; font-weight:bold; margin-bottom:10px;"></div>
+          <table width="100%" style="width:100%; border-collapse:collapse; margin-bottom:14px;"><tr>
+            <td width="50%" style="width:50%; border:1px solid #000; padding:10px; height:90px; vertical-align:top;"><strong>PARECER:</strong></td>
+            <td width="50%" style="width:50%; border:1px solid #000; padding:10px; height:90px; vertical-align:top;"><strong>DESPACHO:</strong></td>
+          </tr></table>
+          <table class="ref-data" width="100%"><tr><td id="p-info-dest" width="65%"></td><td id="p-info-data" width="35%" align="right" style="text-align:right;"></td></tr></table>
+        </div>
         <div class="destinatario" id="p-destinatario"></div>
-        <div class="ref-data">
-          <span id="p-ref"></span>
-          <span id="p-data"></span>
-        </div>
+        <table class="ref-data" id="p-refdata" width="100%"><tr><td id="p-ref" width="60%"></td><td id="p-data" width="40%" align="right" style="text-align:right;"></td></tr></table>
         <div class="assunto" id="p-assunto"></div>
+        <div id="p-excelencia" style="display:none; margin-bottom:8px;">Excelência</div>
         <div class="corpo" id="p-corpo"></div>
-        <div id="p-infoproposta-box" style="display:none; margin-top:24px; border:1px solid #000;">
-          <div style="display:flex;">
-            <div style="flex:1; border-right:1px solid #000; padding:10px; min-height:90px;"><strong>PARECER:</strong></div>
-            <div style="flex:1; padding:10px; min-height:90px;"><strong>DESPACHO:</strong></div>
-          </div>
-        </div>
+        <div class="corpo" id="p-docs" style="display:none; margin-top:8px; text-align:left;"></div>
+        <div class="corpo" id="p-fecho" style="margin-top:8px;"></div>
         <div class="assinatura">
           <div class="cargo" id="p-cargo"></div>
           <div id="p-nome"></div>
@@ -344,6 +349,49 @@ const LOCALIDADES = [
 
 // Cada assunto define os campos estruturados que a IA vai usar.
 // tipo "select" mostra um dropdown com opção "Outro" que abre um campo de texto.
+const DOCUMENTOS_PROCESSO = [
+  "Requerimento dirigido a Sua Excelência o Governador da Província do Niassa",
+  "Requerimento dirigido ao Exmo. Administrador do Distrito de {distrito}",
+  "Confirmação de existência de vaga no {sdejtDestino}",
+  "Despacho de Nomeação Definitiva",
+  "Título de Provimento de Nomeação Provisória",
+  "Despacho de promoção para a Classe {classe}",
+  "BI",
+  "NUIT"
+];
+const INTRO_DOCS = "O processo é constituído pelos seguintes documentos:";
+
+function getCampoValor(id){
+  const el = document.getElementById("campo_" + id);
+  if(!el) return "";
+  if(el.tagName === "SELECT"){
+    if(el.value === "outro"){
+      const o = document.getElementById("campo_" + id + "_outro");
+      return o ? o.value.trim() : "";
+    }
+    return el.value;
+  }
+  return el.value.trim();
+}
+function semSDEJT(v){ return v.replace(/^SDEJT de\s+/i, ""); }
+function expandirSDEJT(v){
+  return /^SDEJT de\s+/i.test(v) ? "Serviço Distrital de Educação, Juventude e Tecnologia de " + semSDEJT(v) : v;
+}
+function preencherDocumento(modelo){
+  return modelo
+    .replace("{distrito}", semSDEJT(getCampoValor("exercicio")) || "…")
+    .replace("{sdejtDestino}", expandirSDEJT(getCampoValor("destino")) || "…")
+    .replace("{classe}", getCampoValor("classe") || "…");
+}
+function getDocumentos(){
+  const el = document.getElementById("docsTexto");
+  if(!el) return [];
+  return el.value.split("\n").map(s=>s.trim()).filter(Boolean);
+}
+function escapeHtml(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
 const CAMPOS_POR_ASSUNTO = {
   "Transferência": [
     { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
@@ -351,7 +399,8 @@ const CAMPOS_POR_ASSUNTO = {
     { id:"classe", label:"Classe", tipo:"text", placeholder:"ex: E" },
     { id:"escalao", label:"Escalão", tipo:"text", placeholder:"ex: 1" },
     { id:"exercicio", label:"Em exercício no", tipo:"select", opcoes:LOCALIDADES },
-    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES }
+    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES },
+    { id:"docsProcesso", label:"Documentos que compõem o processo", tipo:"documentos" }
   ],
   "Mobilidade": [
     { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
@@ -359,7 +408,8 @@ const CAMPOS_POR_ASSUNTO = {
     { id:"classe", label:"Classe", tipo:"text", placeholder:"ex: E" },
     { id:"escalao", label:"Escalão", tipo:"text", placeholder:"ex: 1" },
     { id:"exercicio", label:"Em exercício no", tipo:"select", opcoes:LOCALIDADES },
-    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES }
+    { id:"destino", label:"Para", tipo:"select", opcoes:LOCALIDADES },
+    { id:"docsProcesso", label:"Documentos que compõem o processo", tipo:"documentos" }
   ],
   "Solicitação de Transferência de Funcionário": [
     { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
@@ -376,7 +426,8 @@ const CAMPOS_POR_ASSUNTO = {
   ],
   "Pedido de Parecer": [
     { id:"nome", label:"Nome completo / processo em causa", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
-    { id:"assuntoParecer", label:"Sobre o que se pede parecer", tipo:"text", placeholder:"ex: reclassificação profissional" }
+    { id:"assuntoParecer", label:"Sobre o que se pede parecer", tipo:"text", placeholder:"ex: reclassificação profissional" },
+    { id:"docsProcesso", label:"Documentos que compõem o processo", tipo:"documentos" }
   ],
   "Despacho": [
     { id:"processo", label:"Processo / assunto em despacho", tipo:"text", placeholder:"ex: pedido de licença de Filipe Carlitos Alfredo" },
@@ -410,7 +461,8 @@ const CAMPOS_POR_ASSUNTO = {
     { id:"nome", label:"Nome completo", tipo:"text", placeholder:"ex: Filipe Carlitos Alfredo" },
     { id:"cargo", label:"Cargo a nomear", tipo:"text", placeholder:"ex: Director Adjunto Pedagógico" },
     { id:"local", label:"Instituição / local de exercício", tipo:"select", opcoes:LOCALIDADES },
-    { id:"dataInicio", label:"Data de início", tipo:"text", placeholder:"ex: 1 de Outubro de 2026" }
+    { id:"dataInicio", label:"Data de início", tipo:"text", placeholder:"ex: 1 de Outubro de 2026" },
+    { id:"docsProcesso", label:"Documentos que compõem o processo", tipo:"documentos" }
   ],
   "Envio de fichas de classificação": [
     { id:"anoRef", label:"Ano lectivo de referência", tipo:"text", placeholder:"ex: 2026" },
@@ -422,7 +474,8 @@ const CAMPOS_POR_ASSUNTO = {
     { id:"sector", label:"Departamento/sector", tipo:"text", placeholder:"ex: DRH" }
   ],
   "Envio de Expediente": [
-    { id:"descricao", label:"Descrição do expediente enviado", tipo:"text", placeholder:"ex: processo de aposentação de Filipe Carlitos Alfredo" }
+    { id:"descricao", label:"Descrição do expediente enviado", tipo:"text", placeholder:"ex: processo de aposentação de Filipe Carlitos Alfredo" },
+    { id:"docsProcesso", label:"Documentos que compõem o processo", tipo:"documentos" }
   ],
   "Comunicado": [
     { id:"paraQuem", label:"Destinado a", tipo:"text", placeholder:"ex: todos os funcionários do DRH" },
@@ -477,6 +530,41 @@ function renderCamposDinamicos(){
         outro.style.display = sel.value === "outro" ? "block" : "none";
         if(sel.value === "outro") outro.focus();
       });
+    } else if(campo.tipo === "documentos"){
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "border:1px solid #eee; border-radius:6px; padding:10px;";
+      const ta = document.createElement("textarea");
+      ta.id = "docsTexto";
+      ta.style.cssText = "min-height:110px; margin-top:8px;";
+      ta.placeholder = "Um documento por linha. Pode escrever aqui outros documentos que não estejam na lista.";
+      ta.addEventListener("input", atualizarPreview);
+      DOCUMENTOS_PROCESSO.forEach((modelo, idx) => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex; align-items:center; gap:8px; margin-bottom:4px;";
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.id = "doc_" + idx;
+        const lbl = document.createElement("label");
+        lbl.htmlFor = chk.id;
+        lbl.textContent = modelo.replace(/\{[a-zA-Z]+\}/g, "…");
+        lbl.style.cssText = "margin:0; font-weight:normal;";
+        chk.addEventListener("change", ()=>{
+          const texto = preencherDocumento(modelo);
+          let linhas = ta.value.split("\n").map(s=>s.trim()).filter(Boolean);
+          if(chk.checked){ if(!linhas.includes(texto)) linhas.push(texto); }
+          else { linhas = linhas.filter(l => l !== texto); }
+          ta.value = linhas.join("\n");
+          atualizarPreview();
+        });
+        row.appendChild(chk); row.appendChild(lbl);
+        wrap.appendChild(row);
+      });
+      const dica = document.createElement("div");
+      dica.className = "hint";
+      dica.textContent = "Marque os documentos; a lista abaixo é editável (pode corrigir ou acrescentar linhas).";
+      wrap.appendChild(dica);
+      wrap.appendChild(ta);
+      container.appendChild(wrap);
     } else if(campo.tipo === "materiais"){
       const wrap = document.createElement("div");
       wrap.style.cssText = "border:1px solid #eee; border-radius:6px; padding:10px; max-height:260px; overflow-y:auto;";
@@ -536,6 +624,7 @@ function coletarPontosDinamicos(){
     if(generico && generico.value.trim()) linhas.push(generico.value.trim());
   } else {
     campos.forEach(campo => {
+      if(campo.tipo === "documentos") return;
       if(campo.tipo === "materiais"){
         const itens = [];
         MATERIAIS_REQUISICAO.forEach((mat, idx) => {
@@ -604,6 +693,10 @@ const ABERTURAS_ASSUNTO = {
 };
 const ABERTURA_GENERICA = "Para os devidos efeitos e fins julgados convenientes, vimos por este meio comunicar o seguinte:";
 
+// Informação Proposta: modelo real (Transferência/Mobilidade) e frase fixa de abertura
+const ABERTURA_INFO_MOBILIDADE = "Nos termos dos nºs 1 e 4 do artigo 27 do Estatuto Geral dos Funcionários e Agente do Estado, aprovado pela Lei nº 4/2022, de 11 de Fevereiro, conjugado com os nºs 1 e 3 do artigo 19 do Regulamento do mesmo Estatuto, aprovado pelo Decreto nº 28/2022, de 17 de Junho, de acordo com o seu pedido, propomos";
+const EXEMPLO_INFO = "Nos termos dos nºs 1 e 4 do artigo 27 do Estatuto Geral dos Funcionários e Agente do Estado, aprovado pela Lei nº 4/2022, de 11 de Fevereiro, conjugado com os nºs 1 e 3 do artigo 19 do Regulamento do mesmo Estatuto, aprovado pelo Decreto nº 28/2022, de 17 de Junho, de acordo com o seu pedido, propomos a mobilidade da senhora Lúcia de Nascimento Amós, funcionária enquadrada na carreira de Docente N3, Classe C, Escalão 2, em exercício nesta Direcção Provincial, para o Serviço Distrital de Educação, Juventude e Tecnologia de Lichinga.";
+
 // Exemplos reais (anonimizados quando necessário) tirados dos seus próprios ofícios,
 // usados só como referência de estilo para a IA — nunca copiados literalmente para o documento novo.
 const EXEMPLOS_ASSUNTO = {
@@ -663,6 +756,10 @@ ligarSelectComOutro("destinatarioSelect","destinatarioOutro");
 ligarSelectComOutro("assuntoSelect","assuntoOutro");
 ligarSelectComOutro("refCodigo","refCodigoOutro");
 
+function fechoDoTipo(ehInfo){
+  return ehInfo ? "Deixamos ao mais alto critério de V. Excia para a decisão." : "Cordiais Saudações.";
+}
+
 function atualizarPreview(){
   const destinatario = getDestinatario();
   const ref = getReferencia();
@@ -670,22 +767,45 @@ function atualizarPreview(){
   const assunto = getAssunto();
   const corpo = document.getElementById("corpo").value.trim();
   const assinante = document.getElementById("assinante").value;
-  const tipo = document.getElementById("tipoDoc").value;
-  const ehInfoProposta = tipo === "informacao_proposta";
+  const ehInfo = document.getElementById("tipoDoc").value === "informacao_proposta";
+  const dataTxt = formatarDataPT(data);
 
-  document.getElementById("p-destinatario").textContent = destinatario ? "Ao: " + destinatario : "";
+  document.getElementById("p-info-topo").style.display = ehInfo ? "block" : "none";
+  document.getElementById("p-excelencia").style.display = ehInfo ? "block" : "none";
+  document.getElementById("p-destinatario").style.display = ehInfo ? "none" : "block";
+  document.getElementById("p-refdata").style.display = ehInfo ? "none" : "table";
 
-  if(ehInfoProposta){
-    document.getElementById("p-ref").innerHTML = "<strong>INFORMAÇÃO PROPOSTA Nº " + (document.getElementById("refNum").value.trim() || "___") + "/DPEN/DRH/023</strong>";
-    document.getElementById("p-data").textContent = formatarDataPT(data);
+  if(ehInfo){
+    const num = document.getElementById("refNum").value.trim() || "_____";
+    document.getElementById("p-info-titulo").textContent = "INFORMAÇÃO PROPOSTA Nº " + num + "/DPEN/DRH/023";
+    document.getElementById("p-info-dest").textContent = destinatario;
+    document.getElementById("p-info-data").textContent = dataTxt;
   } else {
-    document.getElementById("p-ref").innerHTML = ref ? "N/Refª " + ref : "";
-    document.getElementById("p-data").textContent = formatarDataPT(data);
+    document.getElementById("p-destinatario").textContent = destinatario ? "Ao: " + destinatario : "";
+    document.getElementById("p-ref").textContent = ref ? "N/Refª " + ref : "";
+    document.getElementById("p-data").textContent = dataTxt;
   }
 
   document.getElementById("p-assunto").textContent = assunto ? "Assunto: " + assunto : "";
   document.getElementById("p-corpo").textContent = corpo;
-  document.getElementById("p-infoproposta-box").style.display = ehInfoProposta ? "block" : "none";
+
+  // lista de documentos que compõem o processo
+  const docs = getDocumentos();
+  const elDocs = document.getElementById("p-docs");
+  if(docs.length){
+    const limpos = docs.map(d => d.replace(/[;.\s]+$/,""));
+    const linhas = limpos.map((d,i)=> (i+1) + ". " + d + (i === limpos.length-1 ? "." : ";"));
+    elDocs.textContent = INTRO_DOCS + "\n" + linhas.join("\n");
+    elDocs.style.display = "block";
+  } else {
+    elDocs.textContent = "";
+    elDocs.style.display = "none";
+  }
+
+  // fecho automático (não duplica se o corpo já o traz)
+  const fecho = fechoDoTipo(ehInfo);
+  const jaTemFecho = /cordiais sauda|deixamos ao mais alto/i.test(corpo);
+  document.getElementById("p-fecho").textContent = jaTemFecho ? "" : fecho;
 
   const info = CARGO_TEXTO[assinante];
   document.getElementById("p-cargo").textContent = info.cargo;
@@ -830,6 +950,10 @@ function carregarHistorico(i){
   assSel.value = assOpt ? doc.assunto : "outro";
   document.getElementById("assuntoOutro").style.display = assOpt ? "none" : "block";
   document.getElementById("assuntoOutro").value = assOpt ? "" : (doc.assunto || "");
+  renderCamposDinamicos();
+  if(doc.docs && doc.docs.length && document.getElementById("docsTexto")){
+    document.getElementById("docsTexto").value = doc.docs.join("\n");
+  }
 
   atualizarPreview();
   setStatus("Documento carregado do histórico.", "ok");
@@ -856,8 +980,15 @@ async function gerarComIA(){
   const assunto = getAssunto();
   const destinatario = getDestinatario();
   const pontos = coletarPontosDinamicos();
-  const abertura = ABERTURAS_ASSUNTO[assunto] || ABERTURA_GENERICA;
-  const exemplo = EXEMPLOS_ASSUNTO[assunto];
+  const ehInfo = tipo === "informacao_proposta";
+  const ehMobilidade = assunto === "Transferência" || assunto === "Mobilidade";
+  const abertura = ehInfo
+    ? (ehMobilidade ? ABERTURA_INFO_MOBILIDADE : "")
+    : (ABERTURAS_ASSUNTO[assunto] || ABERTURA_GENERICA);
+  const exemplo = ehInfo ? EXEMPLO_INFO : EXEMPLOS_ASSUNTO[assunto];
+  const regraAbertura = abertura
+    ? `- O texto final vai começar, obrigatoriamente, por esta frase fixa, já definida, que não deve ser reescrita nem parafraseada: "${abertura}"\n- Por isso, NÃO escreva essa frase (nem nenhuma variação dela). Continue directamente a seguir a ela, indo directo aos dados/conteúdo, sem nenhuma frase introdutória própria.`
+    : `- Comece directamente pelo conteúdo, seguindo o estilo e a estrutura do exemplo acima.`;
 
   const prompt = `Escreva o corpo de um documento oficial moçambicano, em português formal de Moçambique, seguindo rigorosamente o estilo e a estrutura dos ofícios reais da Direcção Provincial de Educação do Niassa.
 O ASSUNTO deste documento é exactamente: "${assunto || "(não indicado)"}". Escreva apenas sobre este assunto — não escreva sobre transferência, vaga ou qualquer outro tema a não ser que o assunto seja precisamente esse.
@@ -866,13 +997,12 @@ Pontos-chave a incluir (use estes dados concretos; não invente nomes nem proces
 ${pontos || "(nenhum fornecido — escreva de forma genérica, mas sempre alinhada ao assunto indicado acima, deixando espaços em branco do tipo [nome] ou [data] onde normalmente haveria um dado específico)"}
 
 Regras:
-- O texto final vai começar, obrigatoriamente, por esta frase fixa que já está definida e não deve ser reescrita nem parafraseada: "${abertura}"
-- Por isso, NÃO escreva essa frase (nem nenhuma variação dela) na sua resposta. Comece a sua resposta directamente a seguir a ela — ou seja, vá directo aos dados/conteúdo (ex.: a lista de materiais, o nome do funcionário, a decisão, etc.), sem nenhuma frase introdutória própria.
+${regraAbertura}
 - Escreva em português de Moçambique cuidado e gramaticalmente correcto: verifique e corrija qualquer erro ortográfico, de acentuação, de concordância verbal (sujeito-verbo) e de concordância nominal (género/número) antes de responder — mesmo que os pontos-chave fornecidos contenham esses erros, o texto final deve sair sem eles.
 - Tom formal, directo, terceira pessoa ("temos a honra de", "honra-nos comunicar", "V. Excia").
 - Cite a legislação aplicável apenas se fizer sentido (ex: Lei nº 4/2022 de 11 de Fevereiro; Decreto nº 28/2022 de 17 de Junho).
-- Termine com "Cordiais Saudações." numa linha própria.
-- Não inclua cabeçalho, destinatário, data nem assinatura — só o corpo do texto, a começar directamente pelo conteúdo (sem a frase de abertura, que já será acrescentada automaticamente).
+- NÃO escreva fórmulas de encerramento (nem "Cordiais Saudações" nem "Deixamos ao mais alto critério de V. Excia para a decisão") nem a saudação "Excelência": são acrescentadas automaticamente. Também NÃO escreva a lista dos documentos que compõem o processo nem a frase "O processo é constituído pelos seguintes documentos": essa lista é acrescentada automaticamente.
+- Não inclua cabeçalho, destinatário, data nem assinatura — só o corpo do texto.
 - Responda apenas com o texto final, sem comentários.`;
 
   setStatus("A gerar rascunho...", "");
@@ -890,12 +1020,16 @@ Regras:
     }
     let texto = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if(!texto) throw new Error("A IA não devolveu texto.");
-    // Remoção defensiva: se a IA repetir a abertura no início, apesar da instrução, retira-se aqui.
+    // Remoção defensiva: se a IA repetir a abertura, o fecho, a saudação ou a lista de documentos, retira-se aqui.
     const aberturaLimpa = abertura.trim().toLowerCase();
     if(aberturaLimpa && texto.toLowerCase().startsWith(aberturaLimpa)){
       texto = texto.slice(abertura.trim().length).trim();
     }
-    document.getElementById("corpo").value = (abertura + " " + texto).replace(/\s+/g," ").trim();
+    texto = texto.replace(/O processo é constituído pelos seguintes documentos:[\s\S]*$/i, "").trim();
+    texto = texto.replace(/\s*(Cordiais\s+Sauda[çc][õo]es\.?|Deixamos ao mais alto crit[ée]rio[^\n]*)\s*$/i, "").trim();
+    texto = texto.replace(/^Excel[êe]ncia[,.:]?\s*/i, "");
+    texto = texto.replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    document.getElementById("corpo").value = abertura ? (abertura + " " + texto) : texto;
     atualizarPreview();
     setStatus("Rascunho gerado. Reveja e ajuste antes de descarregar.", "ok");
   }catch(err){
@@ -915,10 +1049,22 @@ function baixarWord(){
     destinatario: getDestinatario(),
     assunto: getAssunto(),
     assinante: document.getElementById("assinante").value,
-    corpo: document.getElementById("corpo").value.trim()
+    corpo: document.getElementById("corpo").value.trim(),
+    docs: getDocumentos()
   });
 
-  const docHtml = document.getElementById("doc").innerHTML;
+  const clone = document.getElementById("doc").cloneNode(true);
+  clone.querySelectorAll('[style*="display:none"], [style*="display: none"]').forEach(el => el.remove());
+  clone.querySelectorAll(".assinatura, .assinatura div").forEach(el => { el.setAttribute("align","center"); el.style.textAlign = "center"; });
+  const img = clone.querySelector("#imgBrasao");
+  if(img){ img.removeAttribute("id"); img.setAttribute("width","46"); img.setAttribute("height","45"); img.setAttribute("style","width:46px;height:45px;"); }
+  clone.querySelectorAll(".corpo").forEach(el => {
+    const alinh = el.id === "p-docs" ? "left" : "justify";
+    el.innerHTML = el.textContent.split("\n").map(l =>
+      '<p style="margin:0 0 4pt 0; text-align:' + alinh + ';">' + (escapeHtml(l) || "&nbsp;") + '</p>'
+    ).join("");
+  });
+  const docHtml = clone.innerHTML;
   const template = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head><meta charset="utf-8"><title>Documento</title>
@@ -926,10 +1072,12 @@ function baixarWord(){
       body{ font-family:'Times New Roman', Times, serif; font-size:13pt; }
       .cabecalho{ text-align:center; font-weight:bold; }
       .assunto{ font-weight:bold; }
-      .corpo{ text-align:justify; white-space:pre-wrap; }
+      .brasao{ text-align:center; }
+      .corpo{ text-align:justify; }
       .assinatura{ text-align:center; margin-top:50px; }
       .cargo{ margin-bottom:40px; }
-      .ref-data{ display:flex; justify-content:space-between; }
+      table.ref-data{ width:100%; border-collapse:collapse; }
+      table.ref-data td{ vertical-align:top; }
     </style></head>
     <body>${docHtml}</body></html>`;
   const blob = new Blob(['\ufeff', template], { type: 'application/msword' });
